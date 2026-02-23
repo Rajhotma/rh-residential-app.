@@ -41,6 +41,7 @@ if menu == "🏠 Customer Booking":
         st.subheader("🧹 2. Service Selection")
         bundle = st.selectbox("Select Service Level", list(RATES_RESIDENTIAL.keys()))
         prop = st.selectbox("Select Property Type", list(RATES_RESIDENTIAL[bundle].keys()))
+        hours = st.number_input("Number of Hours", min_value=1, max_value=12, value=2)
         
         tabs = st.tabs(["Add-ons", "Ironing", "Schedule & Feedback"])
         with tabs[0]:
@@ -54,7 +55,7 @@ if menu == "🏠 Customer Booking":
     with col_summary:
         st.subheader("💰 Summary")
         f_map = {"None": 0, "Single door (+MYR 75)": 75, "Double door (+MYR 145)": 145}
-        base_price = RATES_RESIDENTIAL[bundle][prop] * 2
+        base_price = RATES_RESIDENTIAL[bundle][prop] * hours
         iron_total = sum(iron_qty[item] * IRON_RATES[item] for item in IRON_RATES)
         subtotal = base_price + f_map[fridge] + iron_total
         
@@ -62,7 +63,7 @@ if menu == "🏠 Customer Booking":
         discount_amount = subtotal * FESTIVAL_DISCOUNT
         grand_total = subtotal - discount_amount
         
-        st.write(f"Subtotal: MYR {subtotal:.2f}")
+        st.write(f"Subtotal ({hours} hour{'s' if hours > 1 else ''}): MYR {subtotal:.2f}")
         st.success(f"🎊 {FESTIVAL_NAME}: -MYR {discount_amount:.2f}")
         st.metric("Total Bill", f"MYR {grand_total:.2f}")
         
@@ -111,3 +112,4 @@ elif menu == "🛡️ Admin Dashboard":
         st.subheader("90/10 Financial Split")
         st.metric("Partner Share", "MYR 135.00")
         st.metric("Company Gross (Before Supervisor Comm)", "MYR 15.00")
+
