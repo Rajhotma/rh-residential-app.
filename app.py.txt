@@ -1,0 +1,107 @@
+import streamlit as st
+import pandas as pd
+import datetime
+from streamlit_js_eval import get_geolocation
+from geopy.distance import geodesic
+
+# --- 1. CONFIG & BRANDING ---
+st.set_page_config(page_title="RH Residential", layout="wide")
+
+# This pulls in your new logo
+try:
+    st.sidebar.image("logo.png", use_container_width=True)
+except:
+    st.sidebar.title("RH RESIDENTIAL")
+
+st.markdown("""
+    <style>
+    .stApp { background-color: #0A192F; color: #E6F1FF; }
+    .stButton>button { border-radius: 5px; font-weight: bold; background-color: #64FFDA; color: #0A192F; }
+    .stProgress > div > div > div > div { background-color: #64FFDA; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. DATA INITIALIZATION ---
+if 'cleaners' not in st.session_state: st.session_state.cleaners = []
+if 'jobs' not in st.session_state: st.session_state.jobs = []
+if 'attendance' not in st.session_state: st.session_state.attendance = {}
+
+# --- 3. NAVIGATION ---
+menu = st.sidebar.radio("CONTROL PANEL", ["Customer Booking", "Partner Portal", "Supervisor Portal", "Admin Dashboard"])
+
+# --- 4. CUSTOMER BOOKING ---
+if menu == "Customer Booking":
+    st.header("✨ RH Modern Building Management")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        tier = st.selectbox("Property Type", ["2BR Apartment (MYR 15)", "3BR Apartment (MYR 25)", "Landed Property (MYR 45)"])
+        zone = st.selectbox("Area", ["Kuala Lumpur City", "Petaling Jaya", "Shah Alam", "Cheras"])
+        zone_coords = {"Kuala Lumpur City": (3.139, 101.686), "Petaling Jaya": (3.107, 101.606), "Shah Alam": (3.073, 101.518), "Cheras": (3.103, 101.737)}
+    
+    with col2:
+        base = 15 if "2BR" in tier else (25 if "3BR" in tier else 45)
+        total = base + 10.0 # Trans fee
+        st.metric("Total Payable", f"MYR {total:.2f}")
+        if st.button("Confirm & Find Nearest") and total >= 25: # Reduced for testing
+            nearest = "None"
+            min_d = float('inf')
+            for name, data in st.session_state.attendance.items():
+                if data['status'] == "Online":
+                    d = geodesic(zone_coords[zone], data['coords']).km
+                    if d < min_d: min_d = d; nearest = name
+            
+            st.session_state.jobs.append({
+                "id": len(st.session_state.jobs)+1, "date": str(datetime.date.today()),
+                "base": base, "t_fee": 10.0, "cleaner": nearest, "status": "Offer Sent", "area": zone
+            })
+            st.success(f"Job assigned to: {nearest}")
+
+# --- 5. PARTNER PORTAL ---
+elif menu == "Partner Portal":
+    p_name = st.selectbox("Partner Login", [c['name'] for c in st.session_state.cleaners] if st.session_state.cleaners else ["No Partners Registered"])
+    
+    loc = get_geolocation()
+    c1, c2 = st.columns(2)
+    if c1.button("🟢 GO ONLINE"):
+        if loc: st.session_state.attendance[p_name] = {"coords": (loc['coords']['latitude'], loc['coords']['longitude']), "status": "Online"}
+    if c2.button("🔴 GO OFFLINE"):
+        if p_name in st.session_state.attendance: st.session_state.attendance[p_name]['status'] = "Offline"
+    
+    # Earning Tracker (90% Base + 100% Transport)
+    my_jobs = [j for j in st.session_state.jobs if j['cleaner'] == p_name and j['status'] == "Completed"]
+    earn = sum([(j['base']*0.9) + j['t_fee'] for j in my_jobs])
+    st.metric("My Total Earnings", f"MYR {earn:.2f}")
+
+    for i, j in enumerate(st.session_state.jobs):
+        if j['cleaner'] == p_name and j['status'] == "Offer Sent":
+            if st.button(f"✅ ACCEPT JOB #{j['id']}", key=f"acc{i}"):
+                st.session_state.jobs[i]['status'] = "Accepted"
+            if st.button(f"🚩 FINISH JOB #{j['id']}", key=f"fin{i}"):
+                st.session_state.jobs[i]['status'] = "Completed"
+
+# --- 6. ADMIN DASHBOARD (THE CEO VIEW) ---
+elif menu == "Admin Dashboard":
+    if st.sidebar.text_input("CEO Password", type="password") == "RH2026":
+        st.header("📈 Financial Audit & Salary Replacement")
+        
+        # Financial Calculations
+        comm_rate = 1.50
+        completed_jobs = [j for j in st.session_state.jobs if j['status'] == "Completed"]
+        gross_rev = sum([j['base'] * 0.10 for j in completed_jobs])
+        staff_costs = len(completed_jobs) * comm_rate
+        your_net = gross_rev - staff_costs
+        
+        # TARGET TRACKER
+        target = 9800.00
+        progress = min(your_net / target, 1.0) if target > 0 else 0
+        st.subheader(f"🎯 Salary Replacement Progress: {progress*100:.1f}%")
+        st.progress(progress)
+        st.write(f"*Current Net Profit:* MYR {your_net:.2f} / Target: MYR {target:.2f}")
+
+        # LEDGER FOR BANK
+        with st.expander("📝 Official Audit Ledger"):
+            st.table(pd.DataFrame(completed_jobs))
+            
+        with st.expander("🛡️ Register Partner"):
+            n = st.text_input("New Partner Name")
+            if st.button("Register"): st.session_state.cleaners.append({"name": n})
