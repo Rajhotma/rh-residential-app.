@@ -1,151 +1,129 @@
 import streamlit as st
-from datetime import datetime, time
 import pandas as pd
+import datetime
+from streamlit_js_eval import get_geolocation
+from geopy.distance import geodesic
 
-# 1. SETUP & BRANDING
-st.set_page_config(page_title="RH Modern Building Management", layout="wide")
-st.sidebar.image("logo.png", use_container_width=True)
-st.sidebar.title("RH EXECUTIVE PANEL")
+# --- 1. CONFIG & BRANDING ---
+st.set_page_config(page_title="RH Residential", layout="wide")
 
-menu = st.sidebar.radio("Navigation", [
-    "🏠 Customer Booking", 
-    "🤝 Partner Hub (Cleaner)", 
-    "📋 Supervisor Command",
-    "⭐ Membership & Loyalty",
-    "🛡️ Admin Suite"
-])
+# This pulls in your new logo
+try:
+    st.sidebar.image("logo.png", use_container_width=True)
+except:
+    st.sidebar.title("RH RESIDENTIAL")
 
-# 2. MASTER DATABASE
-LOCATIONS = ["Seremban 2", "Garden Homes", "Sendayan", "Nilai", "Putrajaya", "Cyberjaya", "Cheras", "Puchong"]
-RATES_RESIDENTIAL = {
-    "Basic (Vacuum/Mop)": {"Apartment": 15.0, "1-Storey": 20.0, "2-Storey": 35.0},
-    "Premium (Dusting)": {"Apartment": 20.0, "1-Storey": 25.0, "2-Storey": 40.0},
-    "Elite (Toilet/All)": {"Apartment": 25.0, "1-Storey": 30.0, "2-Storey": 45.0}
-}
-IRON_RATES = {"Shirt": 2.0, "Trousers": 2.5, "Blouse": 4.5, "T-Shirt": 1.5}
+st.markdown("""
+    <style>
+    .stApp { background-color: #0A192F; color: #E6F1FF; }
+    .stButton>button { border-radius: 5px; font-weight: bold; background-color: #64FFDA; color: #0A192F; }
+    .stProgress > div > div > div > div { background-color: #64FFDA; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# 3. CUSTOMER BOOKING (FIXED CAR PORCH & DISCLAIMER)
-if menu == "🏠 Customer Booking":
-    st.title("✨ RH Cleaning Services")
-    col_main, col_summary = st.columns([2, 1])
+# --- 2. DATA INITIALIZATION ---
+if 'cleaners' not in st.session_state: st.session_state.cleaners = []
+if 'jobs' not in st.session_state: st.session_state.jobs = []
+if 'attendance' not in st.session_state: st.session_state.attendance = {}
+
+# --- 3. NAVIGATION ---
+menu = st.sidebar.radio("CONTROL PANEL", ["Customer Booking", "Partner Portal", "Supervisor Portal", "Admin Dashboard"])
+
+# --- 4. CUSTOMER BOOKING ---
+if menu == "Customer Booking":
+    st.header("✨ RH Modern Building Management")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        tier = st.selectbox("Property Type", ["2BR Apartment (MYR 15)", "3BR Apartment (MYR 25)", "Landed Property (MYR 45)"])
+        zone = st.selectbox("Area", ["Kuala Lumpur City", "Petaling Jaya", "Shah Alam", "Cheras"])
+        zone_coords = {"Kuala Lumpur City": (3.139, 101.686), "Petaling Jaya": (3.107, 101.606), "Shah Alam": (3.073, 101.518), "Cheras": (3.103, 101.737)}
+        phone = st.text_input("Customer Phone Number", max_chars=15)
+        dob = st.date_input("Customer Date of Birth")
     
-    with col_main:
-        st.subheader("👤 Client Details")
-        c_name = st.text_input("Full Name")
-        c_address = st.text_area("Full House Address")
-        is_repeat = st.checkbox("Repeat Customer? (Points tracking enabled)")
+    with col2:
+        base = 15 if "2BR" in tier else (25 if "3BR" in tier else 45)
+        total = base + 10.0 # Trans fee
+        st.metric("Total Payable", f"MYR {total:.2f}")
+        if st.button("Confirm & Find Nearest") and total >= 25:
+            if not phone:
+                st.warning("Please enter your phone number.")
+            else:
+                nearest = "None"
+                min_d = float('inf')
+                for name, data in st.session_state.attendance.items():
+                    if data['status'] == "Online":
+                        d = geodesic(zone_coords[zone], data['coords']).km
+                        if d < min_d: min_d = d; nearest = name
+                st.session_state.jobs.append({
+                    "id": len(st.session_state.jobs)+1,
+                    "date": str(datetime.date.today()),
+                    "base": base,
+                    "t_fee": 10.0,
+                    "cleaner": nearest,
+                    "status": "Offer Sent",
+                    "area": zone,
+                    "phone": phone,
+                    "dob": str(dob)
+                })
+                st.success(f"Job assigned to: {nearest}\nConfirmation sent to: {phone}\nDate of Birth: {dob}")
+
+                # Show booking details
+                st.info(f"Booking Details:\nPhone: {phone}\nDate of Birth: {dob}")
+
+# --- 5. PARTNER PORTAL ---
+elif menu == "Partner Portal":
+    p_name = st.selectbox("Partner Login", [c['name'] for c in st.session_state.cleaners] if st.session_state.cleaners else ["No Partners Registered"])
+    
+    loc = get_geolocation()
+    c1, c2 = st.columns(2)
+    if c1.button("🟢 GO ONLINE"):
+        if loc: st.session_state.attendance[p_name] = {"coords": (loc['coords']['latitude'], loc['coords']['longitude']), "status": "Online"}
+    if c2.button("🔴 GO OFFLINE"):
+        if p_name in st.session_state.attendance: st.session_state.attendance[p_name]['status'] = "Offline"
+    
+    # Earning Tracker (90% Base + 100% Transport)
+    my_jobs = [j for j in st.session_state.jobs if j['cleaner'] == p_name and j['status'] == "Completed"]
+    earn = sum([(j['base']*0.9) + j['t_fee'] for j in my_jobs])
+    st.metric("My Total Earnings", f"MYR {earn:.2f}")
+
+    for i, j in enumerate(st.session_state.jobs):
+        if j['cleaner'] == p_name and j['status'] == "Offer Sent":
+            if st.button(f"✅ ACCEPT JOB #{j['id']}", key=f"acc{i}"):
+                st.session_state.jobs[i]['status'] = "Accepted"
+            if st.button(f"🚩 FINISH JOB #{j['id']}", key=f"fin{i}"):
+                st.session_state.jobs[i]['status'] = "Completed"
+
+# --- 6. ADMIN DASHBOARD (THE CEO VIEW) ---
+elif menu == "Admin Dashboard":
+    if st.sidebar.text_input("CEO Password", type="password") == "RH2026":
+        st.header("📈 Financial Audit & Salary Replacement")
         
-        tabs = st.tabs(["🧹 Cleaning Service", "👔 Ironing & Laundry", "📅 Logistics"])
-        with tabs[0]:
-            bundle = st.selectbox("Service Tier", list(RATES_RESIDENTIAL.keys()))
-            prop = st.selectbox("Property", list(RATES_RESIDENTIAL[bundle].keys()))
-            st.markdown("---")
-            st.subheader("🏠 Specialized Add-ons")
-            # FIXED: Car Porch cleaning explicitly added
-            car_porch = st.checkbox("Car Porch Deep Wash (+MYR 45.00)")
-            fridge = st.checkbox("Fridge Internal Cleaning (+MYR 75.00)")
+        # Financial Calculations
+        comm_rate = 1.50
+        completed_jobs = [j for j in st.session_state.jobs if j['status'] == "Completed"]
+        gross_rev = sum([j['base'] * 0.10 for j in completed_jobs])
+        staff_costs = len(completed_jobs) * comm_rate
+        your_net = gross_rev - staff_costs
+        
+        # TARGET TRACKER
+        target = 9800.00
+        progress = min(your_net / target, 1.0) if target > 0 else 0
+        st.subheader(f"🎯 Salary Replacement Progress: {progress*100:.1f}%")
+        st.progress(progress)
+        st.write(f"*Current Net Profit:* MYR {your_net:.2f} / Target: MYR {target:.2f}")
+
+        # LEDGER FOR BANK
+        with st.expander("📝 Official Audit Ledger"):
+            if completed_jobs:
+                df = pd.DataFrame(completed_jobs)
+                if 'phone' not in df.columns:
+                    df['phone'] = ''
+                df = df.rename(columns={"phone": "Customer Phone"})
+                st.table(df)
+            else:
+                st.write("No completed jobs yet.")
             
-        with tabs[1]:
-            st.write("### Laundry/Ironing")
-            iron_qty = {item: st.number_input(f"{item}", min_value=0) for item in IRON_RATES}
-            st.info("📜 *Laundry Liability Disclaimer*")
-            st.caption("RH Management is committed to high-quality care. However, we accept no liability for shrinkage, color bleeding, or damage to weak fabrics. Claims for damaged articles are strictly capped at 20x the individual ironing fee for said item. By checking below, you agree to these professional terms.")
-            iron_agree = st.checkbox("I accept the Laundry Damage Disclaimer")
-        with tabs[2]:
-            b_date = st.date_input("Date")
-            b_time = st.time_input("Time")
+        with st.expander("🛡️ Register Partner"):
+            n = st.text_input("New Partner Name")
 
-    with col_summary:
-        st.subheader("💰 Total Summary")
-        base = RATES_RESIDENTIAL[bundle][prop] * 2
-        addons = (45 if car_porch else 0) + (75 if fridge else 0)
-        iron_total = sum(iron_qty[item] * IRON_RATES[item] for item in IRON_RATES)
-        grand_total = base + addons + iron_total
-        
-        st.metric("Amount to Pay", f"MYR {grand_total:.2f}")
-        if st.button("Proceed to Assignment"):
-            st.success("Booking Assigned! Welcome back!" if is_repeat else "New Customer Logged!")
-
-# 4. PARTNER HUB (ENHANCED EARNINGS & RATINGS)
-elif menu == "🤝 Partner Hub (Cleaner)":
-    st.title("🤝 Partner Professional Hub")
-    
-    # ONLINE/OFFLINE TOGGLE
-    status = st.toggle("Duty Status (Online/Offline)", value=True)
-    st.write(f"Status: {'🟢 Active' if status else '🔴 Inactive'}")
-    
-    # JOB DETAILS & ACHIEVEMENTS
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Lifetime Rating", "⭐ 4.9/5.0")
-    c2.metric("Total Jobs Done", "124")
-    c3.metric("Achievement", "🎖️ Top Tier")
-    
-    # EARNINGS WALLET
-    st.subheader("💰 Earnings Wallet (90% Payout)")
-    w1, w2, w3 = st.columns(3)
-    w1.metric("Daily Salary", "MYR 135.00")
-    w2.metric("Weekly Salary", "MYR 945.00")
-    w3.metric("Monthly Salary", "MYR 3,780.00")
-    
-    st.write("---")
-    st.subheader("📬 Current Assigned Job")
-    st.info("Customer: En. Ahmad | Address: Garden Homes, S2 | Time: 10:00 AM")
-    if st.button("Confirm Check-In (Notify Supervisor)"):
-        st.success("Live Location Shared with Supervisor Command.")
-
-# 5. SUPERVISOR COMMAND (LOCATION & ADD CLEANER)
-elif menu == "📋 Supervisor Command":
-    st.title("📋 Operations Command Center")
-    
-    # ADD CLEANERS FUNCTION
-    with st.sidebar.expander("➕ Register New Cleaner"):
-        new_name = st.text_input("Cleaner Full Name")
-        new_phone = st.text_input("Cleaner WhatsApp")
-        if st.button("Add to Fleet"):
-            st.success(f"Cleaner {new_name} added to Database!")
-
-    # MULTI-SUPERVISOR COMMISSION TRACKING
-    st.subheader("📈 Multi-Supervisor Commissions")
-    sc1, sc2, sc3 = st.columns(3)
-    sc1.metric("Sup. 1 (Daily)", "MYR 15.00")
-    sc2.metric("Sup. 1 (Weekly)", "MYR 105.00")
-    sc3.metric("Sup. 1 (Monthly)", "MYR 450.00")
-    
-    # LIVE LOCATION TRACKING
-    st.write("---")
-    st.subheader("🛰️ Live Fleet Tracking")
-    # Simulated GPS Table
-    tracking_df = pd.DataFrame({
-        "Cleaner": ["Siti", "Zul", "Ah Gao"],
-        "Live Location": ["Garden Homes (On-Site)", "S2 Highway (Moving)", "Sendayan (Arriving)"],
-        "Battery": ["85%", "40%", "92%"],
-        "Current Task": ["Living Room", "Traveling", "Wait Check-in"]
-    })
-    st.table(tracking_df)
-
-# 6. MEMBERSHIP & LOYALTY (SIMPLIFIED)
-elif menu == "⭐ Membership & Loyalty":
-    st.title("⭐ RH Gold Rewards")
-    st.subheader("How it works:")
-    st.markdown("""
-    1. *Earn 1 Point for every MYR 1 spent.*
-    2. *Silver Tier:* 0 - 500 Points (5% discount)
-    3. *Gold Tier:* 501 - 2000 Points (10% discount)
-    4. *Platinum Tier:* 2000+ Points (Free Deep Clean vouchers)
-    """)
-    st.progress(0.65, text="Your Progress to Platinum: 1300/2000 Points")
-
-# 7. ADMIN SUITE (TRANSACTIONS)
-elif menu == "🛡️ Admin Suite":
-    st.title("🛡️ Executive Analytics")
-    if st.text_input("Key", type="password") == "RH2026":
-        st.subheader("📝 Daily Transaction Ledger")
-        # Transaction History Table
-        ledger = pd.DataFrame({
-            "Time": ["09:00", "10:30", "12:00"],
-            "Customer": ["Siti", "Tan", "Arun"],
-            "Amount": ["MYR 150", "MYR 45", "MYR 230"],
-            "90% Partner": ["MYR 135", "MYR 40.5", "MYR 207"],
-            "10% HQ": ["MYR 15", "MYR 4.5", "MYR 23"]
-        })
-        st.dataframe(ledger, use_container_width=True)
+            if st.button("Register"): st.session_state.cleaners.append({"name": n})
