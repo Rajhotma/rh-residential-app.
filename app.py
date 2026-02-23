@@ -1,129 +1,113 @@
 import streamlit as st
-import pandas as pd
-import datetime
-from streamlit_js_eval import get_geolocation
-from geopy.distance import geodesic
+from datetime import datetime, time
 
-# --- 1. CONFIG & BRANDING ---
-st.set_page_config(page_title="RH Residential", layout="wide")
+# 1. SETUP & BRANDING
+st.set_page_config(page_title="RH Modern Building Management", layout="wide")
+st.sidebar.image("logo.png", use_container_width=True)
+st.sidebar.title("RH EXECUTIVE PANEL")
 
-# This pulls in your new logo
-try:
-    st.sidebar.image("logo.png", use_container_width=True)
-except:
-    st.sidebar.title("RH RESIDENTIAL")
+menu = st.sidebar.radio("Navigation", [
+    "🏠 Customer Booking", 
+    "🤝 Partner Portal", 
+    "📋 Supervisor Portal",
+    "⭐ Membership & Points",
+    "🛡️ Admin Dashboard"
+])
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #0A192F; color: #E6F1FF; }
-    .stButton>button { border-radius: 5px; font-weight: bold; background-color: #64FFDA; color: #0A192F; }
-    .stProgress > div > div > div > div { background-color: #64FFDA; }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. DATABASE & SEASONAL LOGIC
+LOCATIONS = ["Seremban 2", "Garden Homes", "Sendayan", "Nilai", "Putrajaya", "Cyberjaya", "Cheras", "Puchong"]
+RATES_RESIDENTIAL = {
+    "Sweeping, Vacuuming and Mopping": {"2 bedroom Apartment": 15.0, "3 bedroom Apartment": 18.0, "Single storey 3 room": 20.0, "Single storey 4 room": 25.0, "Double storey 4 room": 35.0},
+    "Sweeping, Vacuuming, Mopping and High & Low Dusting": {"2 bedroom Apartment": 20.0, "3 bedroom Apartment": 23.0, "Single storey 3 room": 25.0, "Single storey 4 room": 30.0, "Double storey 4 room": 40.0},
+    "Sweeping, Vacuuming, Mopping, High & Low Dusting and Toilet Cleaning": {"2 bedroom Apartment": 25.0, "3 bedroom Apartment": 28.0, "Single storey 3 room": 30.0, "Single storey 4 room": 35.0, "Double storey 4 room": 45.0}
+}
+IRON_RATES = {"Short sleeve shirt": 2.0, "Long sleeve shirt": 2.5, "Trousers": 2.5, "Blouse": 4.5, "Pants": 4.0, "T-Shirt": 1.5}
 
-# --- 2. DATA INITIALIZATION ---
-if 'cleaners' not in st.session_state: st.session_state.cleaners = []
-if 'jobs' not in st.session_state: st.session_state.jobs = []
-if 'attendance' not in st.session_state: st.session_state.attendance = {}
+# FESTIVAL DISCOUNT SETTINGS
+FESTIVAL_NAME = "Ramadan & Raya Special"
+FESTIVAL_DISCOUNT = 0.10 # 10% Off
 
-# --- 3. NAVIGATION ---
-menu = st.sidebar.radio("CONTROL PANEL", ["Customer Booking", "Partner Portal", "Supervisor Portal", "Admin Dashboard"])
+# 3. CUSTOMER BOOKING
+if menu == "🏠 Customer Booking":
+    st.title("✨ RH Cleaning Services")
+    col_main, col_summary = st.columns([2, 1])
+    
+    with col_main:
+        st.subheader("📍 1. Logistics")
+        c_name = st.text_input("Customer Name")
+        c_phone = st.text_input("Customer Contact Number")
+        c_address = st.text_area("Full House Address")
+        
+        st.subheader("🧹 2. Service Selection")
+        bundle = st.selectbox("Select Service Level", list(RATES_RESIDENTIAL.keys()))
+        prop = st.selectbox("Select Property Type", list(RATES_RESIDENTIAL[bundle].keys()))
+        
+        tabs = st.tabs(["Add-ons", "Ironing", "Schedule & Feedback"])
+        with tabs[0]:
+            fridge = st.radio("Fridge Cleaning", ["None", "Single door (+MYR 75)", "Double door (+MYR 145)"], horizontal=True)
+        with tabs[1]:
+            iron_qty = {item: st.number_input(f"{item}", min_value=0) for item in IRON_RATES}
+        with tabs[2]:
+            b_date = st.date_input("Date")
+            customer_feedback = st.text_area("Special Instructions / Feedback for Previous Service")
 
-# --- 4. CUSTOMER BOOKING ---
-if menu == "Customer Booking":
-    st.header("✨ RH Modern Building Management")
-    col1, col2 = st.columns([2, 1])
+    with col_summary:
+        st.subheader("💰 Summary")
+        f_map = {"None": 0, "Single door (+MYR 75)": 75, "Double door (+MYR 145)": 145}
+        base_price = RATES_RESIDENTIAL[bundle][prop] * 2
+        iron_total = sum(iron_qty[item] * IRON_RATES[item] for item in IRON_RATES)
+        subtotal = base_price + f_map[fridge] + iron_total
+        
+        # Apply Festival Discount
+        discount_amount = subtotal * FESTIVAL_DISCOUNT
+        grand_total = subtotal - discount_amount
+        
+        st.write(f"Subtotal: MYR {subtotal:.2f}")
+        st.success(f"🎊 {FESTIVAL_NAME}: -MYR {discount_amount:.2f}")
+        st.metric("Total Bill", f"MYR {grand_total:.2f}")
+        
+        if st.button("Confirm Booking"):
+            st.success("✅ Booking and Feedback Logged!")
+
+# 4. PARTNER PORTAL
+elif menu == "🤝 Partner Portal":
+    st.title("🤝 Partner Job Inbox")
+    st.write(f"*Customer Name:* {c_name if 'c_name' in locals() else 'Siti Aminah'}")
+    st.write(f"*Contact:* {c_phone if 'c_phone' in locals() else '012-3456789'}")
+    st.write(f"*Address:* {c_address if 'c_address' in locals() else 'Garden Homes, Seremban'}")
+    st.metric("Your 90% Payout", f"MYR {150 * 0.9:.2f}")
+
+# 5. SUPERVISOR PORTAL (REPLY FUNCTION ADDED)
+elif menu == "📋 Supervisor Portal":
+    st.title("📋 Supervisor Control")
+    st.metric("Daily Commission", "MYR 1.50")
+    
+    st.subheader("📬 Customer Feedback & Complaints")
+    with st.expander("View Pending Feedback from: En. Ahmad"):
+        st.write("*Customer Message:* 'Cleaner missed the kitchen floor.'")
+        supervisor_reply = st.text_area("Type your reply/resolution here:")
+        if st.button("Send Reply to Customer"):
+            st.success("Reply sent to customer email & points notification.")
+
+# 6. MEMBERSHIP & POINTS (RESTORED)
+elif menu == "⭐ Membership & Points":
+    st.title("⭐ RH Gold Membership")
+    col1, col2 = st.columns(2)
     with col1:
-        tier = st.selectbox("Property Type", ["2BR Apartment (MYR 15)", "3BR Apartment (MYR 25)", "Landed Property (MYR 45)"])
-        zone = st.selectbox("Area", ["Kuala Lumpur City", "Petaling Jaya", "Shah Alam", "Cheras"])
-        zone_coords = {"Kuala Lumpur City": (3.139, 101.686), "Petaling Jaya": (3.107, 101.606), "Shah Alam": (3.073, 101.518), "Cheras": (3.103, 101.737)}
-        phone = st.text_input("Customer Phone Number", max_chars=15)
-        dob = st.date_input("Customer Date of Birth")
-    
+        st.metric("Your Total Points", "1,250 PTS")
     with col2:
-        base = 15 if "2BR" in tier else (25 if "3BR" in tier else 45)
-        total = base + 10.0 # Trans fee
-        st.metric("Total Payable", f"MYR {total:.2f}")
-        if st.button("Confirm & Find Nearest") and total >= 25:
-            if not phone:
-                st.warning("Please enter your phone number.")
-            else:
-                nearest = "None"
-                min_d = float('inf')
-                for name, data in st.session_state.attendance.items():
-                    if data['status'] == "Online":
-                        d = geodesic(zone_coords[zone], data['coords']).km
-                        if d < min_d: min_d = d; nearest = name
-                st.session_state.jobs.append({
-                    "id": len(st.session_state.jobs)+1,
-                    "date": str(datetime.date.today()),
-                    "base": base,
-                    "t_fee": 10.0,
-                    "cleaner": nearest,
-                    "status": "Offer Sent",
-                    "area": zone,
-                    "phone": phone,
-                    "dob": str(dob)
-                })
-                st.success(f"Job assigned to: {nearest}\nConfirmation sent to: {phone}\nDate of Birth: {dob}")
-
-                # Show booking details
-                st.info(f"Booking Details:\nPhone: {phone}\nDate of Birth: {dob}")
-
-# --- 5. PARTNER PORTAL ---
-elif menu == "Partner Portal":
-    p_name = st.selectbox("Partner Login", [c['name'] for c in st.session_state.cleaners] if st.session_state.cleaners else ["No Partners Registered"])
+        st.write("### Rewards Available")
+        st.write("- 500 PTS: Free Fridge Cleaning")
+        st.write("- 1000 PTS: MYR 20 Voucher")
     
-    loc = get_geolocation()
-    c1, c2 = st.columns(2)
-    if c1.button("🟢 GO ONLINE"):
-        if loc: st.session_state.attendance[p_name] = {"coords": (loc['coords']['latitude'], loc['coords']['longitude']), "status": "Online"}
-    if c2.button("🔴 GO OFFLINE"):
-        if p_name in st.session_state.attendance: st.session_state.attendance[p_name]['status'] = "Offline"
-    
-    # Earning Tracker (90% Base + 100% Transport)
-    my_jobs = [j for j in st.session_state.jobs if j['cleaner'] == p_name and j['status'] == "Completed"]
-    earn = sum([(j['base']*0.9) + j['t_fee'] for j in my_jobs])
-    st.metric("My Total Earnings", f"MYR {earn:.2f}")
+    st.write("---")
+    st.subheader("💬 Message from Supervisor")
+    st.info("No new replies at this time.")
 
-    for i, j in enumerate(st.session_state.jobs):
-        if j['cleaner'] == p_name and j['status'] == "Offer Sent":
-            if st.button(f"✅ ACCEPT JOB #{j['id']}", key=f"acc{i}"):
-                st.session_state.jobs[i]['status'] = "Accepted"
-            if st.button(f"🚩 FINISH JOB #{j['id']}", key=f"fin{i}"):
-                st.session_state.jobs[i]['status'] = "Completed"
-
-# --- 6. ADMIN DASHBOARD (THE CEO VIEW) ---
-elif menu == "Admin Dashboard":
-    if st.sidebar.text_input("CEO Password", type="password") == "RH2026":
-        st.header("📈 Financial Audit & Salary Replacement")
-        
-        # Financial Calculations
-        comm_rate = 1.50
-        completed_jobs = [j for j in st.session_state.jobs if j['status'] == "Completed"]
-        gross_rev = sum([j['base'] * 0.10 for j in completed_jobs])
-        staff_costs = len(completed_jobs) * comm_rate
-        your_net = gross_rev - staff_costs
-        
-        # TARGET TRACKER
-        target = 9800.00
-        progress = min(your_net / target, 1.0) if target > 0 else 0
-        st.subheader(f"🎯 Salary Replacement Progress: {progress*100:.1f}%")
-        st.progress(progress)
-        st.write(f"*Current Net Profit:* MYR {your_net:.2f} / Target: MYR {target:.2f}")
-
-        # LEDGER FOR BANK
-        with st.expander("📝 Official Audit Ledger"):
-            if completed_jobs:
-                df = pd.DataFrame(completed_jobs)
-                if 'phone' not in df.columns:
-                    df['phone'] = ''
-                df = df.rename(columns={"phone": "Customer Phone"})
-                st.table(df)
-            else:
-                st.write("No completed jobs yet.")
-            
-        with st.expander("🛡️ Register Partner"):
-            n = st.text_input("New Partner Name")
-
-            if st.button("Register"): st.session_state.cleaners.append({"name": n})
+# 7. ADMIN DASHBOARD
+elif menu == "🛡️ Admin Dashboard":
+    st.title("🛡️ Admin Suite")
+    if st.text_input("Key", type="password") == "RH2026":
+        st.subheader("90/10 Financial Split")
+        st.metric("Partner Share", "MYR 135.00")
+        st.metric("Company Gross (Before Supervisor Comm)", "MYR 15.00")
