@@ -104,4 +104,5 @@ elif menu == "Admin Dashboard":
             
         with st.expander("🛡️ Register Partner"):
             n = st.text_input("New Partner Name")
+
             if st.button("Register"): st.session_state.cleaners.append({"name": n})
