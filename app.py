@@ -1,7 +1,7 @@
 import streamlit as st
 from datetime import datetime, time
 
-# 1. SETUP & BRANDING
+# 1. SETUP
 st.set_page_config(page_title="RH Modern Building Management", layout="wide")
 st.sidebar.image("logo.png", use_container_width=True)
 st.sidebar.title("RH EXECUTIVE PANEL")
@@ -10,123 +10,80 @@ menu = st.sidebar.radio("Navigation", [
     "🏠 Customer Booking", 
     "🤝 Partner Portal", 
     "📋 Supervisor Portal",
-    "⭐ Membership & Feedback",
     "🛡️ Admin Dashboard"
 ])
 
-# 2. THE COMPLETE DATABASE
-LOCATIONS = ["Seremban 2", "Garden Homes", "Sendayan", "Nilai", "Enstek", "Putrajaya", "Cyberjaya", "Cheras", "KLCC / Bangsar", "Puchong", "Other"]
+# 2. DATABASE LOGIC (SIMULATED DATA FOR DEMO)
+# In a real scenario, these would come from your Google Sheet
+DAILY_JOBS_COUNT = 12 
+TOTAL_DAILY_REVENUE = 1550.00
+SUPERVISOR_RATE = 1.50
 
-RATES_RESIDENTIAL = {
-    "Sweeping, Vacuuming and Mopping": {
-        "2 bedroom Apartment": 15.0, "3 bedroom Apartment": 18.0, "Single storey 3 room": 20.0, "Single storey 4 room": 25.0, "Double storey 4 room": 35.0
-    },
-    "Sweeping, Vacuuming, Mopping and High & Low Dusting": {
-        "2 bedroom Apartment": 20.0, "3 bedroom Apartment": 23.0, "Single storey 3 room": 25.0, "Single storey 4 room": 30.0, "Double storey 4 room": 40.0
-    },
-    "Sweeping, Vacuuming, Mopping, High & Low Dusting and Toilet Cleaning": {
-        "2 bedroom Apartment": 25.0, "3 bedroom Apartment": 28.0, "Single storey 3 room": 30.0, "Single storey 4 room": 35.0, "Double storey 4 room": 45.0
-    }
-}
-
-IRON_RATES = {
-    "Short sleeve shirt": 2.0, "Long sleeve shirt": 2.5, "Trousers": 2.5, 
-    "Blouse": 4.5, "Pants": 4.0, "T-Shirt": 1.5
-}
-
-DEEP_CLEAN = {"None": 0, "Move in deep cleaning": 300.0, "Move out deep cleaning": 450.0, "Renovation cleaning": 250.0}
-
-# 3. CUSTOMER BOOKING PORTAL
+# 3. CUSTOMER BOOKING
 if menu == "🏠 Customer Booking":
     st.title("✨ RH Cleaning Services")
-    col_main, col_summary = st.columns([2, 1])
-    
-    with col_main:
-        st.subheader("👤 Customer Information")
-        c_name = st.text_input("Full Name")
-        c_email = st.text_input("Email Address")
-        c_phone = st.text_input("Mobile Number")
-        
-        tabs = st.tabs(["🧹 Residential", "🧼 Deep Clean & Add-ons", "👔 Ironing", "📅 Planner"])
-        
-        with tabs[0]:
-            st.write("### Residential Service Selection")
-            bundle = st.selectbox("Select Service Level", list(RATES_RESIDENTIAL.keys()))
-            prop = st.selectbox("Select Property Type", list(RATES_RESIDENTIAL[bundle].keys()))
-            hours = st.number_input("Basis Work (Hours)", min_value=2, value=2)
-            res_total = RATES_RESIDENTIAL[bundle][prop] * hours
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.subheader("📍 Booking Details")
+        c_name = st.text_input("Customer Name")
+        c_address = st.text_area("Full House Address")
+        c_area = st.selectbox("Area", ["Seremban 2", "Garden Homes", "Sendayan", "Putrajaya", "Cheras"])
+        st.date_input("Date")
+    with col2:
+        st.subheader("💰 Summary")
+        st.metric("Total Bill", "MYR 150.00")
+        if st.button("Confirm Booking"):
+            st.success("Job Logged & Assigned!")
 
-        with tabs[1]:
-            st.write("### Specialized Cleaning")
-            deep = st.selectbox("Deep Clean Service", list(DEEP_CLEAN.keys()))
-            fridge = st.radio("Fridge Cleaning", ["None", "Single door (+MYR 75)", "Double door (+MYR 145)"], horizontal=True)
-            porch = st.checkbox("Car porch cleaning (+MYR 45.00)")
-            area_select = st.selectbox("Service Area", LOCATIONS)
-
-        with tabs[2]:
-            st.write("### Ironing Article Selection")
-            iron_qty = {}
-            for item, rate in IRON_RATES.items():
-                iron_qty[item] = st.number_input(f"{item} (MYR {rate}/pc)", min_value=0, step=1)
-            st.warning("⚠️ *Terms & Conditions*")
-            iron_agree = st.checkbox("I agree: Claims shall not exceed 20x the ironing charges.")
-
-        with tabs[3]:
-            b_date = st.date_input("Booking Date")
-            b_time = st.time_input("Booking Time", time(9, 0))
-
-    with col_summary:
-        st.subheader("💰 Job Summary")
-        f_map = {"None": 0, "Single door (+MYR 75)": 75, "Double door (+MYR 145)": 145}
-        iron_total = sum(iron_qty[item] * IRON_RATES[item] for item in IRON_RATES)
-        grand_total = res_total + DEEP_CLEAN[deep] + f_map[fridge] + (45 if porch else 0) + iron_total
-        
-        st.metric("Total Charges", f"MYR {grand_total:.2f}")
-        
-        if grand_total < 50:
-            st.error("❗ Minimum job value is MYR 50.00.")
-        else:
-            if st.button("Confirm Booking", use_container_width=True):
-                st.success("Booking Confirmed!")
-                
-                # PROFESSIONAL RECEIPT GENERATOR
-                st.write("---")
-                st.subheader("🧾 Official Receipt")
-                receipt_text = f"""
-                *RH MODERN BUILDING MANAGEMENT*
-                ----------------------------------
-                *Customer:* {c_name}
-                *Date:* {b_date} | *Time:* {b_time}
-                *Area:* {area_select}
-                ----------------------------------
-                - {bundle} ({prop}): MYR {res_total:.2f}
-                - {deep if deep != 'None' else ''}: MYR {DEEP_CLEAN[deep]:.2f}
-                - Fridge Cleaning: MYR {f_map[fridge]:.2f}
-                - Car Porch: MYR {'45.00' if porch else '0.00'}
-                - Ironing Total: MYR {iron_total:.2f}
-                ----------------------------------
-                *GRAND TOTAL: MYR {grand_total:.2f}*
-                ----------------------------------
-                Thank you for choosing RH Cleaning!
-                """
-                st.markdown(receipt_text)
-                st.download_button("Download Receipt (.txt)", receipt_text, file_name=f"RH_Receipt_{c_name}.txt")
-
-# 4. PARTNER, SUPERVISOR, & ADMIN PORTALS (RETAINED)
+# 4. PARTNER PORTAL
 elif menu == "🤝 Partner Portal":
-    st.title("🤝 Partner Onboarding")
-    st.text_input("WhatsApp Contact Number")
-    st.multiselect("Service Coverage Area", LOCATIONS)
-    st.file_uploader("Upload IC / Passport", type=['png', 'jpg', 'jpeg'])
+    st.title("🤝 Partner Job Inbox")
+    st.write("---")
+    st.write("*Assigned Address:* 123, Jalan Garden Homes, Seremban")
+    st.write("*Customer:* En. Ahmad")
+    if st.button("Check-in at Site"):
+        st.info("Check-in timestamp recorded.")
 
+# 5. SUPERVISOR PORTAL (COMMISSION ADDED)
 elif menu == "📋 Supervisor Portal":
     st.title("📋 Supervisor Dashboard")
-    st.metric("Today's Revenue", "MYR 0.00")
-    st.subheader("Complaints")
-    st.info("No active complaints.")
+    
+    # Financials for Supervisor
+    s1, s2, s3 = st.columns(3)
+    s1.metric("Jobs Managed Today", DAILY_JOBS_COUNT)
+    s2.metric("Daily Commission", f"MYR {DAILY_JOBS_COUNT * SUPERVISOR_RATE:.2f}", help="Calculated at MYR 1.50 per job")
+    s3.metric("Pending Feedbacks", "2")
+    
+    st.write("---")
+    st.subheader("📡 Live Ops Monitoring")
+    st.table({
+        "Cleaner": ["Siti", "Zul", "Ah Gao"],
+        "Status": ["Cleaning", "Traveling", "Arrived"],
+        "Address": ["Garden Homes", "Sendayan", "Seremban 2"]
+    })
 
+# 6. ADMIN DASHBOARD (90/10 SPLIT ADDED)
 elif menu == "🛡️ Admin Dashboard":
-    st.title("🛡️ Admin Suite")
+    st.title("🛡️ Executive Admin")
     if st.text_input("Access Key", type="password") == "RH2026":
-        st.subheader("Business Financials")
-        st.metric("Monthly Revenue Target", "MYR 20,000", delta="0%")
+        
+        st.subheader("💹 Revenue Breakdown (90/10 Split)")
+        
+        # Financial Logic
+        partner_payout = TOTAL_DAILY_REVENUE * 0.90
+        company_gross = TOTAL_DAILY_REVENUE * 0.10
+        supervisor_total = DAILY_JOBS_COUNT * SUPERVISOR_RATE
+        net_to_hq = company_gross - supervisor_total
+        
+        a1, a2, a3 = st.columns(3)
+        a1.metric("Total Daily Sales", f"MYR {TOTAL_DAILY_REVENUE:.2f}")
+        a2.metric("Partner Payout (90%)", f"MYR {partner_payout:.2f}", delta_color="inverse")
+        a3.metric("Company Gross (10%)", f"MYR {company_gross:.2f}")
+
+        st.write("---")
+        st.subheader("📊 Profitability After Ops Costs")
+        p1, p2 = st.columns(2)
+        p1.metric("Supervisor Commissions", f"MYR {supervisor_total:.2f}")
+        p2.metric("Net Profit (to HQ)", f"MYR {net_to_hq:.2f}")
+        
+        st.progress(0.10, text="Monthly Revenue Target Progress")
