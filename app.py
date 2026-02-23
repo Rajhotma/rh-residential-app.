@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime, time
+import pandas as pd
 
 # 1. SETUP & BRANDING
 st.set_page_config(page_title="RH Modern Building Management", layout="wide")
@@ -8,106 +9,143 @@ st.sidebar.title("RH EXECUTIVE PANEL")
 
 menu = st.sidebar.radio("Navigation", [
     "🏠 Customer Booking", 
-    "🤝 Partner Portal", 
-    "📋 Supervisor Portal",
-    "⭐ Membership & Points",
-    "🛡️ Admin Dashboard"
+    "🤝 Partner Hub (Cleaner)", 
+    "📋 Supervisor Command",
+    "⭐ Membership & Loyalty",
+    "🛡️ Admin Suite"
 ])
 
-# 2. DATABASE & SEASONAL LOGIC
+# 2. MASTER DATABASE
 LOCATIONS = ["Seremban 2", "Garden Homes", "Sendayan", "Nilai", "Putrajaya", "Cyberjaya", "Cheras", "Puchong"]
 RATES_RESIDENTIAL = {
-    "Sweeping, Vacuuming and Mopping": {"2 bedroom Apartment": 15.0, "3 bedroom Apartment": 18.0, "Single storey 3 room": 20.0, "Single storey 4 room": 25.0, "Double storey 4 room": 35.0},
-    "Sweeping, Vacuuming, Mopping and High & Low Dusting": {"2 bedroom Apartment": 20.0, "3 bedroom Apartment": 23.0, "Single storey 3 room": 25.0, "Single storey 4 room": 30.0, "Double storey 4 room": 40.0},
-    "Sweeping, Vacuuming, Mopping, High & Low Dusting and Toilet Cleaning": {"2 bedroom Apartment": 25.0, "3 bedroom Apartment": 28.0, "Single storey 3 room": 30.0, "Single storey 4 room": 35.0, "Double storey 4 room": 45.0}
+    "Basic (Vacuum/Mop)": {"Apartment": 15.0, "1-Storey": 20.0, "2-Storey": 35.0},
+    "Premium (Dusting)": {"Apartment": 20.0, "1-Storey": 25.0, "2-Storey": 40.0},
+    "Elite (Toilet/All)": {"Apartment": 25.0, "1-Storey": 30.0, "2-Storey": 45.0}
 }
-IRON_RATES = {"Short sleeve shirt": 2.0, "Long sleeve shirt": 2.5, "Trousers": 2.5, "Blouse": 4.5, "Pants": 4.0, "T-Shirt": 1.5}
+IRON_RATES = {"Shirt": 2.0, "Trousers": 2.5, "Blouse": 4.5, "T-Shirt": 1.5}
 
-# FESTIVAL DISCOUNT SETTINGS
-FESTIVAL_NAME = "Ramadan & Raya Special"
-FESTIVAL_DISCOUNT = 0.10 # 10% Off
-
-# 3. CUSTOMER BOOKING
+# 3. CUSTOMER BOOKING (FIXED CAR PORCH & DISCLAIMER)
 if menu == "🏠 Customer Booking":
     st.title("✨ RH Cleaning Services")
     col_main, col_summary = st.columns([2, 1])
     
     with col_main:
-        st.subheader("📍 1. Logistics")
-        c_name = st.text_input("Customer Name")
-        c_phone = st.text_input("Customer Contact Number")
+        st.subheader("👤 Client Details")
+        c_name = st.text_input("Full Name")
         c_address = st.text_area("Full House Address")
+        is_repeat = st.checkbox("Repeat Customer? (Points tracking enabled)")
         
-        st.subheader("🧹 2. Service Selection")
-        bundle = st.selectbox("Select Service Level", list(RATES_RESIDENTIAL.keys()))
-        prop = st.selectbox("Select Property Type", list(RATES_RESIDENTIAL[bundle].keys()))
-        
-        tabs = st.tabs(["Add-ons", "Ironing", "Schedule & Feedback"])
+        tabs = st.tabs(["🧹 Cleaning Service", "👔 Ironing & Laundry", "📅 Logistics"])
         with tabs[0]:
-            fridge = st.radio("Fridge Cleaning", ["None", "Single door (+MYR 75)", "Double door (+MYR 145)"], horizontal=True)
+            bundle = st.selectbox("Service Tier", list(RATES_RESIDENTIAL.keys()))
+            prop = st.selectbox("Property", list(RATES_RESIDENTIAL[bundle].keys()))
+            st.markdown("---")
+            st.subheader("🏠 Specialized Add-ons")
+            # FIXED: Car Porch cleaning explicitly added
+            car_porch = st.checkbox("Car Porch Deep Wash (+MYR 45.00)")
+            fridge = st.checkbox("Fridge Internal Cleaning (+MYR 75.00)")
+            
         with tabs[1]:
+            st.write("### Laundry/Ironing")
             iron_qty = {item: st.number_input(f"{item}", min_value=0) for item in IRON_RATES}
+            st.info("📜 *Laundry Liability Disclaimer*")
+            st.caption("RH Management is committed to high-quality care. However, we accept no liability for shrinkage, color bleeding, or damage to weak fabrics. Claims for damaged articles are strictly capped at 20x the individual ironing fee for said item. By checking below, you agree to these professional terms.")
+            iron_agree = st.checkbox("I accept the Laundry Damage Disclaimer")
         with tabs[2]:
             b_date = st.date_input("Date")
-            customer_feedback = st.text_area("Special Instructions / Feedback for Previous Service")
+            b_time = st.time_input("Time")
 
     with col_summary:
-        st.subheader("💰 Summary")
-        f_map = {"None": 0, "Single door (+MYR 75)": 75, "Double door (+MYR 145)": 145}
-        base_price = RATES_RESIDENTIAL[bundle][prop] * 2
+        st.subheader("💰 Total Summary")
+        base = RATES_RESIDENTIAL[bundle][prop] * 2
+        addons = (45 if car_porch else 0) + (75 if fridge else 0)
         iron_total = sum(iron_qty[item] * IRON_RATES[item] for item in IRON_RATES)
-        subtotal = base_price + f_map[fridge] + iron_total
+        grand_total = base + addons + iron_total
         
-        # Apply Festival Discount
-        discount_amount = subtotal * FESTIVAL_DISCOUNT
-        grand_total = subtotal - discount_amount
-        
-        st.write(f"Subtotal: MYR {subtotal:.2f}")
-        st.success(f"🎊 {FESTIVAL_NAME}: -MYR {discount_amount:.2f}")
-        st.metric("Total Bill", f"MYR {grand_total:.2f}")
-        
-        if st.button("Confirm Booking"):
-            st.success("✅ Booking and Feedback Logged!")
+        st.metric("Amount to Pay", f"MYR {grand_total:.2f}")
+        if st.button("Proceed to Assignment"):
+            st.success("Booking Assigned! Welcome back!" if is_repeat else "New Customer Logged!")
 
-# 4. PARTNER PORTAL
-elif menu == "🤝 Partner Portal":
-    st.title("🤝 Partner Job Inbox")
-    st.write(f"*Customer Name:* {c_name if 'c_name' in locals() else 'Siti Aminah'}")
-    st.write(f"*Contact:* {c_phone if 'c_phone' in locals() else '012-3456789'}")
-    st.write(f"*Address:* {c_address if 'c_address' in locals() else 'Garden Homes, Seremban'}")
-    st.metric("Your 90% Payout", f"MYR {150 * 0.9:.2f}")
-
-# 5. SUPERVISOR PORTAL (REPLY FUNCTION ADDED)
-elif menu == "📋 Supervisor Portal":
-    st.title("📋 Supervisor Control")
-    st.metric("Daily Commission", "MYR 1.50")
+# 4. PARTNER HUB (ENHANCED EARNINGS & RATINGS)
+elif menu == "🤝 Partner Hub (Cleaner)":
+    st.title("🤝 Partner Professional Hub")
     
-    st.subheader("📬 Customer Feedback & Complaints")
-    with st.expander("View Pending Feedback from: En. Ahmad"):
-        st.write("*Customer Message:* 'Cleaner missed the kitchen floor.'")
-        supervisor_reply = st.text_area("Type your reply/resolution here:")
-        if st.button("Send Reply to Customer"):
-            st.success("Reply sent to customer email & points notification.")
-
-# 6. MEMBERSHIP & POINTS (RESTORED)
-elif menu == "⭐ Membership & Points":
-    st.title("⭐ RH Gold Membership")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Your Total Points", "1,250 PTS")
-    with col2:
-        st.write("### Rewards Available")
-        st.write("- 500 PTS: Free Fridge Cleaning")
-        st.write("- 1000 PTS: MYR 20 Voucher")
+    # ONLINE/OFFLINE TOGGLE
+    status = st.toggle("Duty Status (Online/Offline)", value=True)
+    st.write(f"Status: {'🟢 Active' if status else '🔴 Inactive'}")
+    
+    # JOB DETAILS & ACHIEVEMENTS
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Lifetime Rating", "⭐ 4.9/5.0")
+    c2.metric("Total Jobs Done", "124")
+    c3.metric("Achievement", "🎖️ Top Tier")
+    
+    # EARNINGS WALLET
+    st.subheader("💰 Earnings Wallet (90% Payout)")
+    w1, w2, w3 = st.columns(3)
+    w1.metric("Daily Salary", "MYR 135.00")
+    w2.metric("Weekly Salary", "MYR 945.00")
+    w3.metric("Monthly Salary", "MYR 3,780.00")
     
     st.write("---")
-    st.subheader("💬 Message from Supervisor")
-    st.info("No new replies at this time.")
+    st.subheader("📬 Current Assigned Job")
+    st.info("Customer: En. Ahmad | Address: Garden Homes, S2 | Time: 10:00 AM")
+    if st.button("Confirm Check-In (Notify Supervisor)"):
+        st.success("Live Location Shared with Supervisor Command.")
 
-# 7. ADMIN DASHBOARD
-elif menu == "🛡️ Admin Dashboard":
-    st.title("🛡️ Admin Suite")
+# 5. SUPERVISOR COMMAND (LOCATION & ADD CLEANER)
+elif menu == "📋 Supervisor Command":
+    st.title("📋 Operations Command Center")
+    
+    # ADD CLEANERS FUNCTION
+    with st.sidebar.expander("➕ Register New Cleaner"):
+        new_name = st.text_input("Cleaner Full Name")
+        new_phone = st.text_input("Cleaner WhatsApp")
+        if st.button("Add to Fleet"):
+            st.success(f"Cleaner {new_name} added to Database!")
+
+    # MULTI-SUPERVISOR COMMISSION TRACKING
+    st.subheader("📈 Multi-Supervisor Commissions")
+    sc1, sc2, sc3 = st.columns(3)
+    sc1.metric("Sup. 1 (Daily)", "MYR 15.00")
+    sc2.metric("Sup. 1 (Weekly)", "MYR 105.00")
+    sc3.metric("Sup. 1 (Monthly)", "MYR 450.00")
+    
+    # LIVE LOCATION TRACKING
+    st.write("---")
+    st.subheader("🛰️ Live Fleet Tracking")
+    # Simulated GPS Table
+    tracking_df = pd.DataFrame({
+        "Cleaner": ["Siti", "Zul", "Ah Gao"],
+        "Live Location": ["Garden Homes (On-Site)", "S2 Highway (Moving)", "Sendayan (Arriving)"],
+        "Battery": ["85%", "40%", "92%"],
+        "Current Task": ["Living Room", "Traveling", "Wait Check-in"]
+    })
+    st.table(tracking_df)
+
+# 6. MEMBERSHIP & LOYALTY (SIMPLIFIED)
+elif menu == "⭐ Membership & Loyalty":
+    st.title("⭐ RH Gold Rewards")
+    st.subheader("How it works:")
+    st.markdown("""
+    1. *Earn 1 Point for every MYR 1 spent.*
+    2. *Silver Tier:* 0 - 500 Points (5% discount)
+    3. *Gold Tier:* 501 - 2000 Points (10% discount)
+    4. *Platinum Tier:* 2000+ Points (Free Deep Clean vouchers)
+    """)
+    st.progress(0.65, text="Your Progress to Platinum: 1300/2000 Points")
+
+# 7. ADMIN SUITE (TRANSACTIONS)
+elif menu == "🛡️ Admin Suite":
+    st.title("🛡️ Executive Analytics")
     if st.text_input("Key", type="password") == "RH2026":
-        st.subheader("90/10 Financial Split")
-        st.metric("Partner Share", "MYR 135.00")
-        st.metric("Company Gross (Before Supervisor Comm)", "MYR 15.00")
+        st.subheader("📝 Daily Transaction Ledger")
+        # Transaction History Table
+        ledger = pd.DataFrame({
+            "Time": ["09:00", "10:30", "12:00"],
+            "Customer": ["Siti", "Tan", "Arun"],
+            "Amount": ["MYR 150", "MYR 45", "MYR 230"],
+            "90% Partner": ["MYR 135", "MYR 40.5", "MYR 207"],
+            "10% HQ": ["MYR 15", "MYR 4.5", "MYR 23"]
+        })
+        st.dataframe(ledger, use_container_width=True)
