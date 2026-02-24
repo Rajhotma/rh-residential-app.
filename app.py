@@ -6,6 +6,17 @@ st.set_page_config(page_title="RH Modern Building Management", layout="wide")
 st.sidebar.image("logo.png", use_container_width=True)
 st.sidebar.title("RH EXECUTIVE PANEL")
 
+language_options = [
+    "Bahasa Malaysia",
+    "English",
+    "Chinese",
+    "Nepal",
+    "Myanmar",
+    "Pakistan",
+    "Tamil"
+]
+selected_language = st.sidebar.selectbox("Select Language", language_options, index=1)
+st.sidebar.write(f"Selected Language: {selected_language}")
 menu = st.sidebar.radio("Navigation", [
     "🏠 Customer Booking", 
     "🤝 Partner Portal", 
@@ -30,6 +41,7 @@ FESTIVAL_DISCOUNT = 0.10 # 10% Off
 # 3. CUSTOMER BOOKING
 if menu == "🏠 Customer Booking":
     st.title("✨ RH Cleaning Services")
+    st.write(f"Selected Language: {selected_language}")
     col_main, col_summary = st.columns([2, 1])
     
     with col_main:
@@ -73,6 +85,7 @@ if menu == "🏠 Customer Booking":
 # 4. PARTNER PORTAL
 elif menu == "🤝 Partner Portal":
     st.title("🤝 Partner Job Inbox")
+    st.write(f"Selected Language: {selected_language}")
     st.write(f"*Customer Name:* {c_name if 'c_name' in locals() else 'Siti Aminah'}")
     st.write(f"*Contact:* {c_phone if 'c_phone' in locals() else '012-3456789'}")
     st.write(f"*Address:* {c_address if 'c_address' in locals() else 'Garden Homes, Seremban'}")
@@ -81,6 +94,7 @@ elif menu == "🤝 Partner Portal":
 # 5. SUPERVISOR PORTAL (REPLY FUNCTION ADDED)
 elif menu == "📋 Supervisor Portal":
     st.title("📋 Supervisor Control")
+    st.write(f"Selected Language: {selected_language}")
     st.metric("Daily Commission", "MYR 1.50")
     
     st.subheader("📬 Customer Feedback & Complaints")
@@ -93,6 +107,7 @@ elif menu == "📋 Supervisor Portal":
 # 6. MEMBERSHIP & POINTS (RESTORED)
 elif menu == "⭐ Membership & Points":
     st.title("⭐ RH Gold Membership")
+    st.write(f"Selected Language: {selected_language}")
     col1, col2 = st.columns(2)
     with col1:
         st.metric("Your Total Points", "1,250 PTS")
@@ -108,8 +123,8 @@ elif menu == "⭐ Membership & Points":
 # 7. ADMIN DASHBOARD
 elif menu == "🛡️ Admin Dashboard":
     st.title("🛡️ Admin Suite")
+    st.write(f"Selected Language: {selected_language}")
     if st.text_input("Key", type="password") == "RH2026":
         st.subheader("90/10 Financial Split")
         st.metric("Partner Share", "MYR 135.00")
         st.metric("Company Gross (Before Supervisor Comm)", "MYR 15.00")
-
