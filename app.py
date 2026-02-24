@@ -180,6 +180,19 @@ if menu == "🏠 Customer Booking":
             else:
                 st.success(t("✅ Booking and Feedback Logged!"))
 
+            # Persist booking in session for reporting
+            booking_record = {
+                'id': booking_id,
+                'created_at': datetime.now(),
+                'service_date': b_date if 'b_date' in locals() else None,
+                'amount': grand_total,
+                'payment_method': payment_method,
+                'customer_name': c_name,
+            }
+            if 'bookings' not in st.session_state:
+                st.session_state['bookings'] = []
+            st.session_state['bookings'].append(booking_record)
+
             st.session_state['booking_confirmed'] = True
 
         if 'booking_confirmed' in st.session_state and st.session_state['booking_confirmed']:
@@ -323,6 +336,73 @@ elif menu == "🛡️ Admin Dashboard":
         st.metric(t("Daily Earnings"), "MYR 13.50")
         st.metric(t("Weekly Earnings"), "MYR 94.50")
         st.metric(t("Monthly Earnings"), "MYR 378.00")
+
+        # Weekly revenue chart and queued bookings (aggregated by service date)
+        try:
+            import pandas as pd
+            today = datetime.now().date()
+            # get bookings from session
+            bookings = st.session_state.get('bookings', [])
+
+            # build dataframe of bookings by service_date for last 7 days
+            rows = []
+            for b in bookings:
+                svc = b.get('service_date')
+                amount = float(b.get('amount', 0))
+                # normalize service date to date object if possible
+                svc_date = None
+                if svc is not None:
+                    if hasattr(svc, 'date') and not isinstance(svc, str):
+                        svc_date = svc.date() if hasattr(svc, 'date') and not isinstance(svc, datetime) else (svc if isinstance(svc, datetime.date) else svc)
+                    else:
+                        try:
+                            # try parse string
+                            svc_date = pd.to_datetime(str(svc)).date()
+                        except Exception:
+                            svc_date = None
+                # fallback to created_at if service_date missing
+                if svc_date is None:
+                    created = b.get('created_at')
+                    if created and hasattr(created, 'date'):
+                        svc_date = created.date()
+
+                if svc_date:
+                    rows.append({'service_date': svc_date, 'amount': amount})
+
+            df = pd.DataFrame(rows)
+
+            dates = [today - pd.Timedelta(days=i) for i in range(6, -1, -1)]
+
+            revenue_by_day = {d.strftime('%Y-%m-%d'): 0.0 for d in dates}
+            if not df.empty:
+                df['service_date_str'] = df['service_date'].astype(str)
+                for d in revenue_by_day.keys():
+                    revenue_by_day[d] = df.loc[df['service_date_str'] == d, 'amount'].sum()
+
+            # queued bookings made in advance: count service_date > today
+            queued_counts = {d.strftime('%Y-%m-%d'): 0 for d in dates}
+            if not df.empty:
+                for _, row in df.iterrows():
+                    svc = row.get('service_date')
+                    if svc and svc > today:
+                        svc_str = svc.strftime('%Y-%m-%d') if hasattr(svc, 'strftime') else str(svc)
+                        if svc_str in queued_counts:
+                            queued_counts[svc_str] += 1
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader('Weekly Revenue (by service date, last 7 days)')
+                rev_df = pd.DataFrame({'date': list(revenue_by_day.keys()), 'revenue': list(revenue_by_day.values())})
+                rev_df = rev_df.set_index('date')
+                st.bar_chart(rev_df)
+
+            with col2:
+                st.subheader('Queued Bookings (scheduled)')
+                queue_df = pd.DataFrame({'date': list(queued_counts.keys()), 'queued': list(queued_counts.values())}).set_index('date')
+                st.bar_chart(queue_df)
+
+        except Exception as e:
+            st.error(f"Unable to generate admin charts: {e}")
         
         st.subheader(t("90/10 Financial Split"))
         st.metric(t("Partner Share"), "MYR 135.00")
