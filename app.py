@@ -99,15 +99,89 @@ if menu == "🏠 Customer Booking":
         st.success(f"🎊 {t(FESTIVAL_NAME)}: -MYR {discount_amount:.2f}")
         st.metric(t("Total Bill"), f"MYR {grand_total:.2f}")
         st.write(t("Laundry damaged linen disclaimer: shall not exceed 20 times of the cleaning charges"))
-        st.write("**Payment Instructions:**")
-        st.write("All payments for the service must be made to the following account via online transfer:")
-        st.write("**Bank Name:** RHB")
-        st.write("**Account Number:** 25144100006128")
-        st.write("All services are prepaid.")
+
+        # Show laundry tariff breakdown
+        st.write("**Laundry Articles & Tariff**")
+        laundry_rows = []
+        for item, price in IRON_RATES.items():
+            laundry_rows.append({"Item": item, "Price (MYR)": f"{price:.2f}", "Qty Selected": iron_qty.get(item, 0)})
+        st.table(laundry_rows)
+
+        # Payment options
+        st.write("**Payment Options**")
+        payment_method = st.selectbox(t("Choose Payment Method"), ["Online Transfer", "Credit/Debit Card (via Link)", "Cash on Arrival (COD)"], index=0)
+        if payment_method == "Online Transfer":
+            st.write("Please transfer to:")
+            st.write("**Bank Name:** RHB")
+            st.write("**Account Number:** 25144100006128")
+            st.write("Reference: Customer name + booking date")
+        elif payment_method == "Credit/Debit Card (via Link)":
+            st.write("You will receive a secure payment link after confirming the booking.")
+        else:
+            st.write("Please have the exact amount ready for the cleaner on arrival.")
+
+        st.write("All services may require partial prepayment depending on promotions and scheduling.")
+
+        # Customer service contact
+        st.write("---")
+        st.write("**Customer Service**")
+        st.write("For assistance call: +60146814167")
+        st.write("Available daily: 08:00 - 20:00")
+
         if st.button(t("Confirm Booking")):
-            st.success(t("✅ Booking and Feedback Logged!"))
+            # Generate a payment link token when card payment selected
+            import uuid, urllib.parse
+            booking_id = str(uuid.uuid4())
+            payment_token = str(uuid.uuid4())
+            payment_link = f"https://payments.example.com/pay/{urllib.parse.quote(payment_token)}?amount={grand_total:.2f}&id={urllib.parse.quote(booking_id)}"
+
+            st.session_state['last_booking'] = {
+                'id': booking_id,
+                'name': c_name,
+                'phone': c_phone,
+                'email': c_email,
+                'amount': grand_total,
+                'payment_method': payment_method,
+                'payment_link': payment_link
+            }
+
+            # If card payment chosen, show link and attempt to email receipt (if SMTP configured)
+            if payment_method == "Credit/Debit Card (via Link)":
+                st.info("A secure payment link was generated below. You can copy or send it to the customer.")
+                st.write(payment_link)
+                # Attempt to send confirmation email
+                smtp_host = st.secrets.get("SMTP_HOST") if "SMTP_HOST" in st.secrets else None
+                if smtp_host and c_email:
+                    try:
+                        import smtplib
+                        from email.message import EmailMessage
+                        smtp_port = int(st.secrets.get("SMTP_PORT", 587))
+                        smtp_user = st.secrets.get("SMTP_USER")
+                        smtp_pass = st.secrets.get("SMTP_PASS")
+
+                        msg = EmailMessage()
+                        msg["Subject"] = f"RH Booking Confirmation & Payment Link - {booking_id[:8]}"
+                        msg["From"] = st.secrets.get("FROM_EMAIL", smtp_user)
+                        msg["To"] = c_email
+                        msg.set_content(f"Thank you {c_name},\n\nPlease pay MYR {grand_total:.2f} using the secure link:\n{payment_link}\n\nCustomer Service: +60146814167 (08:00-20:00 daily)")
+
+                        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+                        server.starttls()
+                        if smtp_user and smtp_pass:
+                            server.login(smtp_user, smtp_pass)
+                        server.send_message(msg)
+                        server.quit()
+                        st.success("Payment link emailed to customer successfully.")
+                    except Exception as e:
+                        st.error(f"Unable to send email: {e}")
+                else:
+                    st.warning("SMTP not configured or customer email missing — payment link not emailed.")
+
+            else:
+                st.success(t("✅ Booking and Feedback Logged!"))
+
             st.session_state['booking_confirmed'] = True
-        
+
         if 'booking_confirmed' in st.session_state and st.session_state['booking_confirmed']:
             rating = st.slider(t("Rate the service (1-5 stars)"), 1, 5, 5)
             st.write(f"{t('Thank you for your rating:')} {rating} ⭐")
