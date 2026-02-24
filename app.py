@@ -1,12 +1,12 @@
 import streamlit as st
-from googletrans import Translator
+# from googletrans import Translator
 from datetime import datetime, time
 
 # 1. SETUP & BRANDING
 st.set_page_config(page_title="RH Modern Building Management", layout="wide")
 st.sidebar.image("logo.png", use_container_width=True)
 st.sidebar.title("RH EXECUTIVE PANEL")
-translator = Translator()
+
 lang_codes = {
     "Bahasa Malaysia": "ms",
     "English": "en",
@@ -28,14 +28,10 @@ language_options = [
 ]
 selected_language = st.sidebar.selectbox("Select Language", language_options, index=1)
 st.sidebar.write(f"Selected Language: {selected_language}")
+
 def t(text):
-    code = lang_codes.get(selected_language, "en")
-    if code == "en":
-        return text
-    try:
-        return translator.translate(text, dest=code).text
-    except Exception:
-        return text
+    # Translation temporarily disabled
+    return text
 menu = st.sidebar.radio("Navigation", [
     "🏠 Customer Booking", 
     "🤝 Partner Portal", 
