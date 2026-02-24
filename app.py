@@ -82,6 +82,7 @@ if menu == "🏠 Customer Booking":
             iron_qty = {item: st.number_input(t(item), min_value=0) for item in IRON_RATES}
         with tabs[2]:
             b_date = st.date_input(t("Date"))
+            b_time = st.time_input(t("Time"), value=time(9, 0), min_value=time(9, 0), max_value=time(18, 0))
             customer_feedback = st.text_area(t("Special Instructions / Feedback for Previous Service"))
 
     with col_summary:
@@ -98,6 +99,11 @@ if menu == "🏠 Customer Booking":
         st.success(f"🎊 {t(FESTIVAL_NAME)}: -MYR {discount_amount:.2f}")
         st.metric(t("Total Bill"), f"MYR {grand_total:.2f}")
         st.write(t("Laundry damaged linen disclaimer: shall not exceed 20 times of the cleaning charges"))
+        st.write("**Payment Instructions:**")
+        st.write("All payments for the service must be made to the following account via online transfer:")
+        st.write("**Bank Name:** RHB")
+        st.write("**Account Number:** 25144100006128")
+        st.write("All services are prepaid.")
         if st.button(t("Confirm Booking")):
             st.success(t("✅ Booking and Feedback Logged!"))
             st.session_state['booking_confirmed'] = True
@@ -115,14 +121,23 @@ elif menu == "🤝 Partner Portal":
     st.subheader(t("Registration"))
     with st.expander(t("Complete Registration")):
         nric_passport = st.file_uploader(t("Upload NRIC or Passport"))
+        selfie = st.file_uploader(t("Upload Selfie for Verification"))
         gender = st.selectbox(t("Gender"), ["Male", "Female"])
         p_dob = st.date_input(t("Date of Birth"))
         p_contact = st.text_input(t("Contact Number"))
         next_kin_name = st.text_input(t("Next of Kin Name"))
         next_kin_contact = st.text_input(t("Next of Kin Contact"))
-        banking_details = st.text_input(t("Banking Details for Withdrawal"))
+        bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
+        account_number = st.text_input(t("Account Number"))
         if st.button(t("Register")):
             st.success(t("Registration Complete!"))
+    
+    # Planner
+    st.subheader(t("Planner"))
+    with st.expander(t("View Upcoming Bookings")):
+        st.write("**Tomorrow:** Cleaning at Garden Homes, 10:00 AM")
+        st.write("**Next Week:** Cleaning at Sendayan, 2:00 PM")
+        st.write("**Next Month:** Cleaning at Putrajaya, 11:00 AM")
     
     # Job Details
     st.subheader(t("Upcoming Job"))
@@ -138,25 +153,57 @@ elif menu == "🤝 Partner Portal":
     st.metric(t("Weekly Earnings"), "MYR 945.00")
     st.metric(t("Monthly Earnings"), "MYR 3780.00")
     st.metric(t("Your 90% Payout"), f"MYR {135 * 0.9:.2f}")
+    with st.expander(t("Earnings Breakdown")):
+        st.write("**Daily Breakdown:**")
+        st.write("- Job 1: MYR 50.00")
+        st.write("- Job 2: MYR 45.00")
+        st.write("- Job 3: MYR 40.00")
+        st.write("**Weekly Breakdown:** Similar pattern for 7 days")
+        st.write("**Monthly Breakdown:** 4 weeks accumulation")
     
     # Status
     online_status = st.radio(t("Status"), ["Online", "Offline"], index=0)
     st.write(f"Current Status: {online_status}")
+    
+    # Withdrawal
+    st.subheader(t("Withdrawal"))
+    if st.button(t("Withdraw Earnings")):
+        st.success(t("Withdrawal processed automatically to your bank account!"))
 
 # 5. SUPERVISOR PORTAL (REPLY FUNCTION ADDED)
 elif menu == "📋 Supervisor Portal":
     st.title(t("📋 Supervisor Control"))
     st.write(f"{t('Selected Language')}: {selected_language}")
     
+    # Verify Cleaners
+    st.subheader(t("Verify Cleaners"))
+    with st.expander(t("Pending Verifications")):
+        st.write("**Cleaner: Ahmad bin Abdullah**")
+        st.write("NRIC: Uploaded")
+        st.write("Selfie: Uploaded")
+        if st.button(t("Approve Ahmad")):
+            st.success(t("Ahmad approved!"))
+        st.write("**Cleaner: Siti Aminah**")
+        st.write("NRIC: Uploaded")
+        st.write("Selfie: Pending")
+        if st.button(t("Approve Siti")):
+            st.success(t("Siti approved!"))
+    
     # Banking Details
     st.subheader(t("Banking Details"))
-    s_banking = st.text_input(t("Banking Details for Withdrawal"))
+    s_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
+    s_account_number = st.text_input(t("Account Number"))
     
     # Earnings
     st.subheader(t("Earnings"))
     st.metric(t("Daily Commission"), "MYR 1.50")
     st.metric(t("Weekly Commission"), "MYR 10.50")
     st.metric(t("Monthly Commission"), "MYR 42.00")
+    
+    # Withdrawal
+    st.subheader(t("Withdrawal"))
+    if st.button(t("Withdraw Commission")):
+        st.success(t("Withdrawal processed automatically to your bank account!"))
     
     # Cleaner Movements
     st.subheader(t("Cleaner Movements"))
@@ -193,6 +240,11 @@ elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
     st.write(f"{t('Selected Language')}: {selected_language}")
     if st.text_input(t("Key"), type="password") == "RH2026":
+        # Banking Details
+        st.subheader(t("Banking Details"))
+        a_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
+        a_account_number = st.text_input(t("Account Number"))
+        
         st.subheader(t("Earnings (Minus Partners & Supervisor)"))
         st.metric(t("Daily Earnings"), "MYR 13.50")
         st.metric(t("Weekly Earnings"), "MYR 94.50")
@@ -201,6 +253,11 @@ elif menu == "🛡️ Admin Dashboard":
         st.subheader(t("90/10 Financial Split"))
         st.metric(t("Partner Share"), "MYR 135.00")
         st.metric(t("Company Gross (Before Supervisor Comm)"), "MYR 15.00")
+        
+        # Withdrawal
+        st.subheader(t("Withdrawal"))
+        if st.button(t("Withdraw Salary")):
+            st.success(t("Withdrawal processed automatically to your bank account!"))
         
         st.subheader(t("Area Demand"))
         st.write("**Most Demanded Areas:**")
