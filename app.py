@@ -82,7 +82,8 @@ if menu == "🏠 Customer Booking":
             iron_qty = {item: st.number_input(t(item), min_value=0) for item in IRON_RATES}
         with tabs[2]:
             b_date = st.date_input(t("Date"))
-            b_time = st.time_input(t("Time"), value=time(9, 0), min_value=time(9, 0), max_value=time(18, 0))
+            # Use a simple default time to avoid Streamlit type compatibility issues
+            b_time = st.time_input(t("Time"), value=datetime.now().time())
             customer_feedback = st.text_area(t("Special Instructions / Feedback for Previous Service"))
 
     with col_summary:
