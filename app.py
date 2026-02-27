@@ -164,6 +164,7 @@ if menu == "🏠 Customer Booking":
         st.subheader(t("📍 1. Logistics"))
         greeting = st.selectbox(t("Greeting"), ["Mr", "Mrs", "Puan", "Sir", "Dr", "Tan Sri", "Dato", "Madam"])
         c_name = st.text_input(t("Customer Name"))
+        c_email = st.text_input(t("Customer Email"))
         c_phone = st.text_input(t("Customer Contact Number"))
         c_dob = st.date_input(t("Date of Birth"))
         c_address = st.text_area(t("Full House Address"))
@@ -183,6 +184,7 @@ if menu == "🏠 Customer Booking":
             iron_qty = {item: st.number_input(t(item), min_value=0) for item in IRON_RATES}
         with tabs[2]:
             b_date = st.date_input(t("Date"))
+            st.session_state['last_booking_date'] = b_date
             # Use a simple default time to avoid Streamlit type compatibility issues
             b_time = st.time_input(t("Time"), value=datetime.now().time())
             customer_feedback = st.text_area(t("Special Instructions / Feedback for Previous Service"))
@@ -206,7 +208,9 @@ if menu == "🏠 Customer Booking":
             "By using RH Cleaning Services for laundry or linen cleaning you acknowledge and agree to the following:" \
             "\n\n- RH Modern Building Management takes care when handling customer garments and household linens, however accidents can occur.\n" \
             "- Our liability for loss or damage to laundry items is limited. In the event of proven loss or damage caused by our staff, the maximum aggregate compensation payable by RH Modern Building Management shall not exceed twenty (20) times the amount charged for the cleaning service for that particular job, or the actual replacement value of the lost/damaged item, whichever is lower.\n" \
-            "- Customers must declare any high-value or sentimental items before service begins. We recommend removing jewellery and valuables from garments prior to service.\n" \\n+            "- Claims must be reported within 48 hours of service completion and must include photo evidence and a description of the item. RH reserves the right to investigate any claim and arrange assessment by an independent assessor if required.\n" \\n+            "- This limit is a contractual cap on direct damages and does not affect consumer statutory rights where such rights cannot be excluded by agreement."
+            "- Customers must declare any high-value or sentimental items before service begins. We recommend removing jewellery and valuables from garments prior to service.\n" \
+            "- Claims must be reported within 48 hours of service completion and must include photo evidence and a description of the item. RH reserves the right to investigate any claim and arrange assessment by an independent assessor if required.\n" \
+            "- This limit is a contractual cap on direct damages and does not affect consumer statutory rights where such rights cannot be excluded by agreement."
         )
 
         # Show laundry tariff breakdown
@@ -300,7 +304,7 @@ if menu == "🏠 Customer Booking":
             booking_record = {
                 'id': booking_id,
                 'created_at': datetime.now(),
-                'service_date': b_date if 'b_date' in locals() else None,
+                'service_date': st.session_state.get('last_booking_date', None),
                 'amount': grand_total,
                 'payment_method': payment_method,
                 'customer_name': c_name,
@@ -348,7 +352,7 @@ elif menu == "🤝 Partner Portal":
             if 'notifications' in st.session_state:
                 del st.session_state['notifications']
             _init_cleaners()
-            st.experimental_rerun()
+            st.rerun()
         st.write("\n")
         st.write("Notifications:")
         notes = st.session_state.get('notifications', [])
@@ -540,19 +544,23 @@ elif menu == "🛡️ Admin Dashboard":
                 # normalize service date to date object if possible
                 svc_date = None
                 if svc is not None:
-                    if hasattr(svc, 'date') and not isinstance(svc, str):
-                        svc_date = svc.date() if hasattr(svc, 'date') and not isinstance(svc, datetime) else (svc if isinstance(svc, datetime.date) else svc)
+                    if isinstance(svc, datetime):
+                        svc_date = svc.date()
+                    elif hasattr(svc, 'date'):
+                        svc_date = svc
                     else:
                         try:
-                            # try parse string
                             svc_date = pd.to_datetime(str(svc)).date()
                         except Exception:
                             svc_date = None
                 # fallback to created_at if service_date missing
                 if svc_date is None:
                     created = b.get('created_at')
-                    if created and hasattr(created, 'date'):
-                        svc_date = created.date()
+                    if created:
+                        if isinstance(created, datetime):
+                            svc_date = created.date()
+                        elif hasattr(created, 'date'):
+                            svc_date = created
 
                 if svc_date:
                     rows.append({'service_date': svc_date, 'amount': amount})
@@ -562,20 +570,22 @@ elif menu == "🛡️ Admin Dashboard":
             dates = [today - pd.Timedelta(days=i) for i in range(6, -1, -1)]
 
             revenue_by_day = {d.strftime('%Y-%m-%d'): 0.0 for d in dates}
-            if not df.empty:
+            if not df.empty and len(df) > 0:
                 df['service_date_str'] = df['service_date'].astype(str)
                 for d in revenue_by_day.keys():
-                    revenue_by_day[d] = df.loc[df['service_date_str'] == d, 'amount'].sum()
+                    revenue_by_day[d] = float(df.loc[df['service_date_str'] == d, 'amount'].sum())
 
             # queued bookings made in advance: count service_date > today
             queued_counts = {d.strftime('%Y-%m-%d'): 0 for d in dates}
-            if not df.empty:
+            if not df.empty and len(df) > 0:
                 for _, row in df.iterrows():
                     svc = row.get('service_date')
-                    if svc and svc > today:
-                        svc_str = svc.strftime('%Y-%m-%d') if hasattr(svc, 'strftime') else str(svc)
-                        if svc_str in queued_counts:
-                            queued_counts[svc_str] += 1
+                    if svc and isinstance(svc, (datetime.date, datetime)):
+                        svc_date = svc.date() if isinstance(svc, datetime) else svc
+                        if svc_date > today:
+                            svc_str = svc_date.strftime('%Y-%m-%d') if hasattr(svc_date, 'strftime') else str(svc_date)
+                            if svc_str in queued_counts:
+                                queued_counts[svc_str] += 1
 
             col1, col2 = st.columns(2)
             with col1:
@@ -610,4 +620,3 @@ elif menu == "🛡️ Admin Dashboard":
     # Footer / Copyright
     st.write("---")
     st.markdown("&copy; 2026 RH Modern Building Management")
-
