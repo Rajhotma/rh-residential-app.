@@ -324,46 +324,6 @@ elif menu == "🤝 Partner Portal":
     st.title(t("🤝 Partner Job Inbox"))
     st.write(f"{t('Selected Language')}: {selected_language}")
     
-    # Initialize simulated cleaners and notifications
-    _init_cleaners()
-    st.subheader(t("GPS Tracking (Simulated)"))
-    cols = st.columns([3,1])
-    with cols[0]:
-        st.write("Live cleaner locations (simulated):")
-        import pandas as pd
-        cleaners = st.session_state.get('cleaners', [])
-        df_cleaners = pd.DataFrame([{
-            'Name': c['name'], 'Lat': round(c['lat'],6), 'Lon': round(c['lon'],6), 'Status': c['status'], 'OnSiteSince': (c['on_site_since'].strftime('%Y-%m-%d %H:%M:%S') if c.get('on_site_since') else ''), 'ExpectedMin': c.get('expected_minutes', '')
-        } for c in cleaners])
-        st.dataframe(df_cleaners)
-        if st.button("Simulate Step"):
-            changed = _simulate_step()
-            if changed:
-                st.success("Simulation step applied.")
-            else:
-                st.info("No changes this step.")
-
-    with cols[1]:
-        st.write("Controls")
-        if st.button("Reset Cleaners"):
-            # reset simulated cleaners
-            if 'cleaners' in st.session_state:
-                del st.session_state['cleaners']
-            if 'notifications' in st.session_state:
-                del st.session_state['notifications']
-            _init_cleaners()
-            st.rerun()
-        st.write("\n")
-        st.write("Notifications:")
-        notes = st.session_state.get('notifications', [])
-        if notes:
-            for n in notes[-10:][::-1]:
-                ttime = n.get('time').strftime('%Y-%m-%d %H:%M:%S') if n.get('time') else ''
-                st.warning(f"{ttime} — {n.get('message')}")
-        else:
-            st.write("No notifications yet.")
-
-    
     # Registration Section
     st.subheader(t("Registration"))
     with st.expander(t("Complete Registration")):
