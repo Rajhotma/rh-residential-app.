@@ -3,11 +3,196 @@ import streamlit as st
 from datetime import datetime, time
 import random
 import math
+import sqlite3
+import json
+import os
 
 # 1. SETUP & BRANDING
 st.set_page_config(page_title="RH Modern Building Management", layout="wide")
 st.sidebar.image("logo.png", width='stretch')
 st.sidebar.title("RH EXECUTIVE PANEL")
+
+# --- DATABASE SETUP ---
+DB_FILE = "rh_database.db"
+
+def _init_db():
+    """Initialize SQLite database with required tables."""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    # Bookings table
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS bookings (
+        id TEXT PRIMARY KEY,
+        created_at TEXT,
+        service_date TEXT,
+        amount REAL,
+        payment_method TEXT,
+        customer_name TEXT,
+        location_lat REAL,
+        location_lon REAL,
+        customer_address TEXT,
+        assigned_to TEXT,
+        assigned_at TEXT
+    )
+    ''')
+    
+    # Cleaners table
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS cleaners (
+        name TEXT PRIMARY KEY,
+        lat REAL,
+        lon REAL,
+        status TEXT,
+        last_update TEXT,
+        on_site_since TEXT,
+        expected_minutes INTEGER,
+        email TEXT,
+        assigned_job TEXT,
+        next_kin_name TEXT,
+        next_kin_contact TEXT,
+        bank_name TEXT,
+        account_number TEXT
+    )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+def _load_bookings_from_db():
+    """Load all bookings from database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT * FROM bookings')
+    rows = c.fetchall()
+    conn.close()
+    
+    bookings = []
+    for row in rows:
+        booking = {
+            'id': row[0],
+            'created_at': datetime.fromisoformat(row[1]) if row[1] else None,
+            'service_date': datetime.fromisoformat(row[2]).date() if row[2] else None,
+            'amount': row[3],
+            'payment_method': row[4],
+            'customer_name': row[5],
+            'location_lat': row[6],
+            'location_lon': row[7],
+            'customer_address': row[8],
+            'assigned_to': row[9],
+            'assigned_at': datetime.fromisoformat(row[10]) if row[10] else None,
+        }
+        bookings.append(booking)
+    return bookings
+
+def _save_booking_to_db(booking):
+    """Save a single booking to database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+    INSERT OR REPLACE INTO bookings 
+    (id, created_at, service_date, amount, payment_method, customer_name, location_lat, location_lon, customer_address, assigned_to, assigned_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        booking['id'],
+        booking['created_at'].isoformat() if booking.get('created_at') else None,
+        booking['service_date'].isoformat() if booking.get('service_date') else None,
+        booking['amount'],
+        booking['payment_method'],
+        booking['customer_name'],
+        booking['location_lat'],
+        booking['location_lon'],
+        booking['customer_address'],
+        booking['assigned_to'],
+        booking['assigned_at'].isoformat() if booking.get('assigned_at') else None,
+    ))
+    conn.commit()
+    conn.close()
+
+def _load_cleaners_from_db():
+    """Load all cleaners from database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT * FROM cleaners')
+    rows = c.fetchall()
+    conn.close()
+    
+    cleaners = []
+    for row in rows:
+        cleaner = {
+            'name': row[0],
+            'lat': row[1],
+            'lon': row[2],
+            'status': row[3],
+            'last_update': datetime.fromisoformat(row[4]) if row[4] else None,
+            'on_site_since': datetime.fromisoformat(row[5]) if row[5] else None,
+            'expected_minutes': row[6],
+            'email': row[7],
+            'assigned_job': row[8],
+            'next_kin_name': row[9],
+            'next_kin_contact': row[10],
+            'bank_name': row[11],
+            'account_number': row[12],
+        }
+        cleaners.append(cleaner)
+    return cleaners
+
+def _save_cleaner_to_db(cleaner):
+    """Save a single cleaner to database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+    INSERT OR REPLACE INTO cleaners 
+    (name, lat, lon, status, last_update, on_site_since, expected_minutes, email, assigned_job, next_kin_name, next_kin_contact, bank_name, account_number)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        cleaner['name'],
+        cleaner['lat'],
+        cleaner['lon'],
+        cleaner['status'],
+        cleaner['last_update'].isoformat() if cleaner.get('last_update') else None,
+        cleaner['on_site_since'].isoformat() if cleaner.get('on_site_since') else None,
+        cleaner['expected_minutes'],
+        cleaner['email'],
+        cleaner['assigned_job'],
+        cleaner.get('next_kin_name'),
+        cleaner.get('next_kin_contact'),
+        cleaner.get('bank_name'),
+        cleaner.get('account_number'),
+    ))
+    conn.commit()
+    conn.close()
+
+# Initialize session state with data from database
+def _init_session_state():
+    """Load data from database into session state on app startup."""
+    if 'bookings' not in st.session_state:
+        st.session_state['bookings'] = _load_bookings_from_db()
+    if 'cleaners' not in st.session_state:
+        # Try loading from DB first
+        db_cleaners = _load_cleaners_from_db()
+        if db_cleaners:
+            st.session_state['cleaners'] = db_cleaners
+        else:
+            # Initialize default cleaners if none exist
+            st.session_state['cleaners'] = [
+                {'name': 'Ahmad', 'lat': 2.726, 'lon': 101.938, 'status': 'Online', 'last_update': None, 'on_site_since': None, 'expected_minutes': 120, 'email': 'ahmad@example.com', 'assigned_job': None, 'next_kin_name': None, 'next_kin_contact': None, 'bank_name': None, 'account_number': None},
+                {'name': 'Siti', 'lat': 2.730, 'lon': 101.940, 'status': 'Online', 'last_update': None, 'on_site_since': None, 'expected_minutes': 90, 'email': 'siti@example.com', 'assigned_job': None, 'next_kin_name': None, 'next_kin_contact': None, 'bank_name': None, 'account_number': None},
+                {'name': 'Ramesh', 'lat': 2.725, 'lon': 101.935, 'status': 'Online', 'last_update': None, 'on_site_since': None, 'expected_minutes': 60, 'email': 'ramesh@example.com', 'assigned_job': None, 'next_kin_name': None, 'next_kin_contact': None, 'bank_name': None, 'account_number': None},
+            ]
+            # Save defaults to DB
+            for cleaner in st.session_state['cleaners']:
+                _save_cleaner_to_db(cleaner)
+    
+    if 'notifications' not in st.session_state:
+        st.session_state['notifications'] = []
+
+_init_session_state()
+
 
 lang_codes = {
     "Bahasa Malaysia": "ms",
@@ -54,16 +239,10 @@ IRON_RATES = {"Short sleeve shirt": 2.0, "Long sleeve shirt": 2.5, "Trousers": 2
 
 # --- Simulation helpers for GPS tracking & notifications ---
 def _init_cleaners():
+    """Ensure cleaners are loaded in session state (called for compatibility)."""
     if 'cleaners' not in st.session_state:
-        # sample cleaners with starting coords and contact emails
-        st.session_state['cleaners'] = [
-            {'name': 'Ahmad', 'lat': 2.726, 'lon': 101.938, 'status': 'Offline', 'last_update': None, 'on_site_since': None, 'expected_minutes': 120, 'email': 'ahmad@example.com'},
-            {'name': 'Siti', 'lat': 2.730, 'lon': 101.940, 'status': 'Offline', 'last_update': None, 'on_site_since': None, 'expected_minutes': 90, 'email': 'siti@example.com'},
-            {'name': 'Ramesh', 'lat': 2.725, 'lon': 101.935, 'status': 'Offline', 'last_update': None, 'on_site_since': None, 'expected_minutes': 60, 'email': 'ramesh@example.com'},
-        ]
+        _init_session_state()
 
-    if 'notifications' not in st.session_state:
-        st.session_state['notifications'] = []
 
 
 def _dist_meters(lat1, lon1, lat2, lon2):
@@ -74,6 +253,47 @@ def _dist_meters(lat1, lon1, lat2, lon2):
     return math.sqrt(x*x + y*y) * R
 
 
+def _auto_assign_jobs():
+    """Auto-assign pending bookings to nearest available cleaners."""
+    _init_cleaners()
+    bookings = st.session_state.get('bookings', [])
+    cleaners = st.session_state.get('cleaners', [])
+    
+    for booking in bookings:
+        # Skip if already assigned
+        if booking.get('assigned_to'):
+            continue
+        
+        # Skip if booking has no location data
+        if not booking.get('location_lat') or not booking.get('location_lon'):
+            continue
+        
+        # Find available cleaners (online and not currently assigned)
+        available_cleaners = [
+            c for c in cleaners 
+            if c.get('status') == 'Online' and not c.get('assigned_job')
+        ]
+        
+        if not available_cleaners:
+            continue
+        
+        # Find nearest cleaner
+        job_lat, job_lon = booking['location_lat'], booking['location_lon']
+        nearest_cleaner = min(
+            available_cleaners,
+            key=lambda c: _dist_meters(c['lat'], c['lon'], job_lat, job_lon)
+        )
+        
+        # Assign job
+        booking['assigned_to'] = nearest_cleaner['name']
+        booking['assigned_at'] = datetime.now()
+        nearest_cleaner['assigned_job'] = booking['id']
+        
+        # Save assignments to database
+        _save_booking_to_db(booking)
+        _save_cleaner_to_db(nearest_cleaner)
+
+
 def _simulate_step():
     now = datetime.now()
     changed = False
@@ -82,6 +302,7 @@ def _simulate_step():
         if c['status'] == 'Offline' and random.random() < 0.3:
             c['status'] = 'Moving'
             c['last_update'] = now
+            _save_cleaner_to_db(c)
             changed = True
             continue
 
@@ -94,6 +315,7 @@ def _simulate_step():
             # chance to arrive
             if random.random() < 0.25:
                 c['status'] = 'Arriving'
+            _save_cleaner_to_db(c)
             changed = True
             continue
 
@@ -105,6 +327,7 @@ def _simulate_step():
             if random.random() < 0.5:
                 c['status'] = 'On-Site'
                 c['on_site_since'] = now
+            _save_cleaner_to_db(c)
             changed = True
             continue
 
@@ -153,6 +376,28 @@ def _simulate_step():
 # FESTIVAL DISCOUNT SETTINGS
 FESTIVAL_NAME = "Ramadan & Raya Special"
 FESTIVAL_DISCOUNT = 5.0 # MYR 5.00 Off
+
+# Location coordinates mapping (postcode/area to lat/lon)
+LOCATION_COORDS = {
+    "Seremban 2": (2.726, 101.938),
+    "Garden Homes": (2.730, 101.940),
+    "Sendayan": (2.725, 101.935),
+    "Nilai": (2.748, 101.885),
+    "Putrajaya": (2.926, 101.695),
+    "Cyberjaya": (2.909, 101.750),
+    "Cheras": (3.135, 101.615),
+    "Puchong": (2.764, 101.609),
+    "Kota Warisan": (2.756, 101.630),
+    "Bandar Sri Sendayan": (2.713, 101.945),
+    "Tiara": (2.625, 101.851),
+    "Adira": (2.650, 101.815),
+    "Sepang": (2.726, 101.551),
+    "KLIA1": (2.745, 101.691),
+    "KLIA2": (2.748, 101.712),
+    "Rasah Kemayan": (2.680, 101.925),
+    "Port Dickson": (2.806, 101.834),
+    "Suriaman": (2.700, 101.850),
+}
 
 # 3. CUSTOMER BOOKING
 if menu == "🏠 Customer Booking":
@@ -301,6 +546,13 @@ if menu == "🏠 Customer Booking":
                 st.success(t("✅ Booking and Feedback Logged!"))
 
             # Persist booking in session for reporting
+            # Get location coordinates from address or postcode
+            location_lat, location_lon = 2.726, 101.938  # Default to Seremban 2
+            for loc_name, coords in LOCATION_COORDS.items():
+                if loc_name.lower() in c_address.lower() or loc_name.lower() in c_postcode.lower():
+                    location_lat, location_lon = coords
+                    break
+            
             booking_record = {
                 'id': booking_id,
                 'created_at': datetime.now(),
@@ -308,10 +560,18 @@ if menu == "🏠 Customer Booking":
                 'amount': grand_total,
                 'payment_method': payment_method,
                 'customer_name': c_name,
+                'location_lat': location_lat,
+                'location_lon': location_lon,
+                'customer_address': c_address,
+                'assigned_to': None,
+                'assigned_at': None,
             }
             if 'bookings' not in st.session_state:
                 st.session_state['bookings'] = []
             st.session_state['bookings'].append(booking_record)
+            
+            # Save to database
+            _save_booking_to_db(booking_record)
 
             st.session_state['booking_confirmed'] = True
 
@@ -323,6 +583,59 @@ if menu == "🏠 Customer Booking":
 elif menu == "🤝 Partner Portal":
     st.title(t("🤝 Partner Job Inbox"))
     st.write(f"{t('Selected Language')}: {selected_language}")
+    _init_cleaners()
+    
+    # Status Toggle
+    st.subheader(t("🟢 Your Status"))
+    partner_name = st.session_state.get('current_partner_name', 'Partner')
+    current_status = st.radio(t("Status"), ["Online", "Offline"], index=0, horizontal=True)
+    
+    # Update partner's status in cleaners list
+    if 'cleaners' in st.session_state:
+        for cleaner in st.session_state['cleaners']:
+            if cleaner['name'] == partner_name:
+                cleaner['status'] = current_status
+                # Save status change to database
+                _save_cleaner_to_db(cleaner)
+                break
+    
+    st.write(f"**Current Status:** {current_status}")
+    
+    # Assigned Job Section
+    st.subheader(t("📌 Assigned Jobs"))
+    if current_status == "Online":
+        bookings = st.session_state.get('bookings', [])
+        assigned_jobs = [b for b in bookings if b.get('assigned_to') == partner_name]
+        
+        if assigned_jobs:
+            for job in assigned_jobs:
+                with st.container(border=True):
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(f"**Customer:** {job.get('customer_name')}")
+                        st.write(f"**Address:** {job.get('customer_address')}")
+                        st.write(f"**Amount:** MYR {job.get('amount', 0):.2f}")
+                        st.write(f"**Assigned At:** {job.get('assigned_at').strftime('%Y-%m-%d %H:%M') if job.get('assigned_at') else 'N/A'}")
+                    with col2:
+                        st.info(f"Job ID: {job['id'][:8]}")
+                        if st.button(t("Accept Job"), key=f"accept_{job['id']}"):
+                            st.success(t("Job accepted! Navigate to the location now."))
+                        if st.button(t("Decline"), key=f"decline_{job['id']}"):
+                            job['assigned_to'] = None
+                            job['assigned_at'] = None
+                            # Also clear assignment from the cleaner
+                            for cleaner in st.session_state.get('cleaners', []):
+                                if cleaner['assigned_job'] == job['id']:
+                                    cleaner['assigned_job'] = None
+                                    _save_cleaner_to_db(cleaner)
+                                    break
+                            # Save job update to database
+                            _save_booking_to_db(job)
+                            st.rerun()
+        else:
+            st.info(t("No jobs assigned yet. You will receive a job once you're online and available."))
+    else:
+        st.warning(t("Go Online to receive job assignments."))
     
     # Registration Section
     st.subheader(t("Registration"))
@@ -345,14 +658,21 @@ elif menu == "🤝 Partner Portal":
                 # add cleaner to simulated cleaners list
                 _init_cleaners()
                 new_name = p_name or p_contact or "New Cleaner"
-                st.session_state['cleaners'].append({
+                st.session_state['current_partner_name'] = new_name
+                new_cleaner = {
                     'name': new_name,
                     'lat': 2.726, 'lon': 101.938,
-                    'status': 'Offline', 'last_update': None, 'on_site_since': None,
-                    'expected_minutes': 90, 'email': '', 'next_kin_name': next_kin_name, 'next_kin_contact': next_kin_contact,
-                    'bank_name': bank_name, 'account_number': account_number
-                })
+                    'status': 'Online', 'last_update': None, 'on_site_since': None,
+                    'expected_minutes': 90, 'email': p_contact, 'next_kin_name': next_kin_name, 'next_kin_contact': next_kin_contact,
+                    'bank_name': bank_name, 'account_number': account_number, 'assigned_job': None
+                }
+                st.session_state['cleaners'].append(new_cleaner)
+                
+                # Save to database
+                _save_cleaner_to_db(new_cleaner)
+                
                 st.success(t("Registration Complete!"))
+                st.rerun()
     
     # Planner
     st.subheader(t("Planner"))
@@ -383,10 +703,6 @@ elif menu == "🤝 Partner Portal":
         st.write("**Weekly Breakdown:** Similar pattern for 7 days")
         st.write("**Monthly Breakdown:** 4 weeks accumulation")
     
-    # Status
-    online_status = st.radio(t("Status"), ["Online", "Offline"], index=0)
-    st.write(f"Current Status: {online_status}")
-    
     # Withdrawal
     st.subheader(t("Withdrawal"))
     if st.button(t("Withdraw Earnings")):
@@ -396,6 +712,56 @@ elif menu == "🤝 Partner Portal":
 elif menu == "📋 Supervisor Portal":
     st.title(t("📋 Supervisor Control"))
     st.write(f"{t('Selected Language')}: {selected_language}")
+    
+    _init_cleaners()
+    _auto_assign_jobs()  # Auto-assign jobs to nearest available cleaners
+    
+    # Auto-Assignment Dashboard
+    st.subheader(t("🤖 Auto-Assignment Status"))
+    col1, col2, col3 = st.columns(3)
+    
+    bookings = st.session_state.get('bookings', [])
+    unassigned_jobs = [b for b in bookings if not b.get('assigned_to')]
+    assigned_jobs = [b for b in bookings if b.get('assigned_to')]
+    
+    with col1:
+        st.metric(t("Total Jobs"), len(bookings))
+    with col2:
+        st.metric(t("Assigned"), len(assigned_jobs))
+    with col3:
+        st.metric(t("Pending"), len(unassigned_jobs))
+    
+    # Assigned Jobs Display
+    if assigned_jobs:
+        st.subheader(t("✅ Assigned Jobs"))
+        for job in assigned_jobs:
+            with st.container(border=True):
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.write(f"**Customer:** {job.get('customer_name')}")
+                    st.write(f"**Location:** {job.get('customer_address')}")
+                    st.write(f"**Amount:** MYR {job.get('amount', 0):.2f}")
+                with col2:
+                    st.info(f"**Assigned To:** {job.get('assigned_to')}")
+                with col3:
+                    st.write(f"ID: {job['id'][:8]}")
+    
+    # Unassigned Jobs Display
+    if unassigned_jobs:
+        st.subheader(t("⏳ Pending Assignment"))
+        st.warning(f"{len(unassigned_jobs)} jobs waiting for available cleaners...")
+        for job in unassigned_jobs:
+            with st.container(border=True):
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.write(f"**Customer:** {job.get('customer_name')}")
+                    st.write(f"**Location:** {job.get('customer_address')}")
+                    st.write(f"**Amount:** MYR {job.get('amount', 0):.2f}")
+                with col2:
+                    st.write(f"ID: {job['id'][:8]}")
+                    if st.button(t("Try Assign"), key=f"try_assign_{job['id']}"):
+                        st.rerun()
+    
     # Map View placeholder showing cleaner locations (simulated)
     try:
         _init_cleaners()
@@ -445,12 +811,27 @@ elif menu == "📋 Supervisor Portal":
         st.success(t("Withdrawal processed automatically to your bank account!"))
     
     # Cleaner Movements
-    st.subheader(t("Cleaner Movements"))
-    st.write("**Cleaner 1:** In Progress - Garden Homes")
-    st.write("**Cleaner 2:** Pending - Sendayan")
-    st.write("**Cleaner 3:** Traveling - 2 KM away")
-    st.write("**Cleaner 4:** Online - Available")
-    st.write("**Cleaner 5:** Offline")
+    st.subheader(t("Cleaner Movements & Assignments"))
+    cleaners = st.session_state.get('cleaners', [])
+    for cleaner in cleaners:
+        assigned_status = "Assigned" if cleaner.get('assigned_job') else "Available"
+        status_icon = "🟢" if cleaner['status'] == "Online" else "🔴"
+        with st.container(border=True):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"{status_icon} **{cleaner['name']}** - {cleaner['status']}")
+                st.write(f"Location: Lat {round(cleaner['lat'], 4)}, Lon {round(cleaner['lon'], 4)}")
+                st.write(f"Job Status: {assigned_status}")
+                if cleaner.get('assigned_job'):
+                    # Find the assigned job details
+                    job = next((b for b in bookings if b['id'] == cleaner['assigned_job']), None)
+                    if job:
+                        st.write(f"📌 Working for: {job.get('customer_name')}")
+            with col2:
+                if cleaner['status'] == 'Online':
+                    st.success(f"ID: {cleaner['name'][:3]}")
+                else:
+                    st.caption(f"ID: {cleaner['name'][:3]}")
     
     st.subheader(t("📬 Customer Feedback & Complaints"))
     with st.expander(t("View Pending Feedback from: En. Ahmad")):
