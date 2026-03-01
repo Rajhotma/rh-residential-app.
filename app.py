@@ -657,15 +657,15 @@ elif menu == "🤝 Partner Portal":
         gender = st.selectbox(t("Gender"), ["Male", "Female"])
         p_dob = st.date_input(t("Date of Birth"))
         p_contact = st.text_input(t("Contact Number"))
-            next_kin_name = st.text_input(t("Next of Kin Name (required)"))
-            next_kin_contact = st.text_input(t("Next of Kin Contact (required)"))
+        next_kin_name = st.text_input(t("Next of Kin Name (required)"))
+        next_kin_contact = st.text_input(t("Next of Kin Contact (required)"))
         bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
         account_number = st.text_input(t("Account Number"))
         if st.button(t("Register")):
-                if not next_kin_name or not next_kin_contact:
-                    st.error(t("Next of kin name and contact are required."))
-                else:
-                    st.success(t("Registration Complete!"))
+            if not next_kin_name or not next_kin_contact:
+                st.error(t("Next of kin name and contact are required."))
+            else:
+                st.success(t("Registration Complete!"))
                 _init_cleaners()
                 new_name = p_name or p_contact or "New Cleaner"
                 st.session_state['current_partner_name'] = new_name
@@ -677,10 +677,8 @@ elif menu == "🤝 Partner Portal":
                     'bank_name': bank_name, 'account_number': account_number, 'assigned_job': None
                 }
                 st.session_state['cleaners'].append(new_cleaner)
-                
                 # Save to database
                 _save_cleaner_to_db(new_cleaner)
-                
                 st.success(t("Registration Complete!"))
                 st.rerun()
     
