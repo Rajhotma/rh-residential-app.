@@ -8,9 +8,53 @@ import json
 import os
 
 # 1. SETUP & BRANDING
+import qrcode
+from io import BytesIO
+from PIL import Image
+params = st.experimental_get_query_params()
+role = params.get("role", [None])[0]
+
+# Define menu options for each role
+MENU_OPTIONS = {
+    "customer": ["🏠 Customer Booking"],
+    "partner": ["🤝 Partner Portal"],
+    "supervisor": ["🤝 Partner Portal", "📋 Supervisor Portal", "⭐ Membership & Points"],
+    None: [
+        "🏠 Customer Booking", 
+        "🤝 Partner Portal", 
+        "📋 Supervisor Portal",
+        "⭐ Membership & Points",
+        "🛡️ Admin Dashboard"
+    ]
+}
 st.set_page_config(page_title="RH Modern Building Management", layout="wide")
 st.sidebar.image("logo.png", width='stretch')
 st.sidebar.title("RH EXECUTIVE PANEL")
+
+# QR code sharing for customer and partner portal
+st.sidebar.markdown("---")
+st.sidebar.subheader("Quick Access QR Codes")
+base_url = st.secrets["base_url"] if "base_url" in st.secrets else "https://your-app-url"  # Set your deployment URL here
+customer_url = f"{base_url}/?role=customer"
+partner_url = f"{base_url}/?role=partner"
+
+def qr_img(url):
+    qr = qrcode.QRCode(box_size=2, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+st.sidebar.markdown("**Customer Booking**")
+st.sidebar.image(qr_img(customer_url), caption="Scan to Book (Customer)", use_column_width=True)
+st.sidebar.markdown(f"[Open Booking Page]({customer_url})")
+
+st.sidebar.markdown("**Partner Portal**")
+st.sidebar.image(qr_img(partner_url), caption="Scan for Partner Portal", use_column_width=True)
+st.sidebar.markdown(f"[Open Partner Portal]({partner_url})")
 
 # --- DATABASE SETUP ---
 DB_FILE = "rh_database.db"
@@ -107,14 +151,7 @@ def _save_booking_to_db(booking):
         booking['customer_address'],
         booking['assigned_to'],
         booking['assigned_at'].isoformat() if booking.get('assigned_at') else None,
-    ))
-    conn.commit()
-    conn.close()
-
-def _load_cleaners_from_db():
-    """Load all cleaners from database."""
-    _init_db()
-    conn = sqlite3.connect(DB_FILE)
+    menu = st.sidebar.radio("Navigation", MENU_OPTIONS.get(role, MENU_OPTIONS[None]))
     c = conn.cursor()
     c.execute('SELECT * FROM cleaners')
     rows = c.fetchall()
@@ -447,16 +484,12 @@ if menu == "🏠 Customer Booking":
         st.write(f"{t('Subtotal')} ({hours} {t('hour')}{t('s') if hours > 1 else ''}): MYR {subtotal:.2f}")
         st.success(f"🎊 {t(FESTIVAL_NAME)}: -MYR {discount_amount:.2f}")
         st.metric(t("Total Bill"), f"MYR {grand_total:.2f}")
-        # Professional Laundry Liability Disclaimer
-        st.write("**Laundry Liability Disclaimer**")
-        st.write(
-            "By using RH Cleaning Services for laundry or linen cleaning you acknowledge and agree to the following:" \
-            "\n\n- RH Modern Building Management takes care when handling customer garments and household linens, however accidents can occur.\n" \
-            "- Our liability for loss or damage to laundry items is limited. In the event of proven loss or damage caused by our staff, the maximum aggregate compensation payable by RH Modern Building Management shall not exceed twenty (20) times the amount charged for the cleaning service for that particular job, or the actual replacement value of the lost/damaged item, whichever is lower.\n" \
-            "- Customers must declare any high-value or sentimental items before service begins. We recommend removing jewellery and valuables from garments prior to service.\n" \
-            "- Claims must be reported within 48 hours of service completion and must include photo evidence and a description of the item. RH reserves the right to investigate any claim and arrange assessment by an independent assessor if required.\n" \
-            "- This limit is a contractual cap on direct damages and does not affect consumer statutory rights where such rights cannot be excluded by agreement."
-        )
+        with st.expander("Laundry Liability Disclaimer (click to view)"):
+            st.markdown("""
+            - RH Modern Building Management is not liable for damages exceeding 20x the service fee paid for the affected laundry item.
+            - By booking, you agree to this limit of liability.
+            - For full terms, please contact our support.
+            """)
 
         # Show laundry tariff breakdown
         st.write("**Laundry Articles & Tariff**")
@@ -646,16 +679,15 @@ elif menu == "🤝 Partner Portal":
         gender = st.selectbox(t("Gender"), ["Male", "Female"])
         p_dob = st.date_input(t("Date of Birth"))
         p_contact = st.text_input(t("Contact Number"))
-        next_kin_name = st.text_input(t("Next of Kin Name"))
-        next_kin_contact = st.text_input(t("Next of Kin Contact"))
+            next_kin_name = st.text_input(t("Next of Kin Name (required)"))
+            next_kin_contact = st.text_input(t("Next of Kin Contact (required)"))
         bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
         account_number = st.text_input(t("Account Number"))
         if st.button(t("Register")):
-            # require next-of-kin contact
-            if not next_kin_name or not next_kin_contact:
-                st.error(t("Please provide Next of Kin name and contact before registering."))
-            else:
-                # add cleaner to simulated cleaners list
+                if not next_kin_name or not next_kin_contact:
+                    st.error(t("Next of kin name and contact are required."))
+                else:
+                    st.success(t("Registration Complete!"))
                 _init_cleaners()
                 new_name = p_name or p_contact or "New Cleaner"
                 st.session_state['current_partner_name'] = new_name
@@ -780,6 +812,8 @@ elif menu == "📋 Supervisor Portal":
     except Exception:
         st.info(t("Map View not available in this environment. This is a placeholder."))
     
+    # Supervisor Info
+    st.info("Supervisor 1: Name: Dian, Employee number RH0002\n\nSupervisor 2: Name: Aya, Employee number RH0003")
     # Verify Cleaners
     st.subheader(t("Verify Cleaners"))
     with st.expander(t("Pending Verifications")):
@@ -799,11 +833,15 @@ elif menu == "📋 Supervisor Portal":
     s_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
     s_account_number = st.text_input(t("Account Number"))
     
-    # Earnings
-    st.subheader(t("Earnings"))
-    st.metric(t("Daily Commission"), "MYR 1.50")
-    st.metric(t("Weekly Commission"), "MYR 10.50")
-    st.metric(t("Monthly Commission"), "MYR 42.00")
+    # Earnings (split equally between both supervisors)
+    st.subheader(t("Earnings (Each Supervisor)"))
+    total_daily_commission = 3.00
+    total_weekly_commission = 21.00
+    total_monthly_commission = 84.00
+    st.metric(t("Daily Commission"), f"MYR {total_daily_commission/2:.2f}")
+    st.metric(t("Weekly Commission"), f"MYR {total_weekly_commission/2:.2f}")
+    st.metric(t("Monthly Commission"), f"MYR {total_monthly_commission/2:.2f}")
+    st.caption("*Commission is split equally between Supervisor 1 (Dian) and Supervisor 2 (Aya)*")
     
     # Withdrawal
     st.subheader(t("Withdrawal"))
@@ -855,6 +893,7 @@ elif menu == "⭐ Membership & Points":
     st.subheader(t("💬 Message from Supervisor"))
     st.info(t("No new replies at this time."))
 
+import datetime
 # 7. ADMIN DASHBOARD
 elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
@@ -957,6 +996,9 @@ elif menu == "🛡️ Admin Dashboard":
         st.write("- Seremban 2: 45 bookings")
         st.write("- Garden Homes: 38 bookings")
         st.write("- Putrajaya: 32 bookings")
+
+    # Footer copyright
+    st.markdown("<div style='text-align:center; color:gray; margin-top:2em;'>© 2026 RH Modern Building Management.</div>", unsafe_allow_html=True)
 
     # Footer / Copyright
     st.write("---")
