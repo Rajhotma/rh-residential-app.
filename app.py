@@ -894,7 +894,6 @@ elif menu == "⭐ Membership & Points":
     st.subheader(t("💬 Message from Supervisor"))
     st.info(t("No new replies at this time."))
 
-import datetime
 # 7. ADMIN DASHBOARD
 elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
