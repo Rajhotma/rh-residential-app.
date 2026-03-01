@@ -8,9 +8,14 @@ import json
 import os
 
 # 1. SETUP & BRANDING
-import qrcode
-from io import BytesIO
-from PIL import Image
+try:
+    import qrcode
+    from io import BytesIO
+    from PIL import Image
+    QRCODE_AVAILABLE = True
+except ImportError:
+    QRCODE_AVAILABLE = False
+    st.error("QR code module not available. Please refresh the page or contact support.")
 try:
     params = st.query_params
     role = params.get("role", None)
@@ -44,6 +49,8 @@ customer_url = f"{base_url}/?role=customer"
 partner_url = f"{base_url}/?role=partner"
 
 def qr_img(url):
+    if not QRCODE_AVAILABLE:
+        return None
     qr = qrcode.QRCode(box_size=2, border=2)
     qr.add_data(url)
     qr.make(fit=True)
@@ -54,11 +61,13 @@ def qr_img(url):
     return buf
 
 st.sidebar.markdown("**Customer Booking**")
-st.sidebar.image(qr_img(customer_url), caption="Scan to Book (Customer)", use_column_width=True)
+if QRCODE_AVAILABLE:
+    st.sidebar.image(qr_img(customer_url), caption="Scan to Book (Customer)", use_column_width=True)
 st.sidebar.markdown(f"[Open Booking Page]({customer_url})")
 
 st.sidebar.markdown("**Partner Portal**")
-st.sidebar.image(qr_img(partner_url), caption="Scan for Partner Portal", use_column_width=True)
+if QRCODE_AVAILABLE:
+    st.sidebar.image(qr_img(partner_url), caption="Scan for Partner Portal", use_column_width=True)
 st.sidebar.markdown(f"[Open Partner Portal]({partner_url})")
 
 # --- DATABASE SETUP ---
