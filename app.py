@@ -11,8 +11,13 @@ import os
 import qrcode
 from io import BytesIO
 from PIL import Image
-params = st.experimental_get_query_params()
-role = params.get("role", [None])[0]
+try:
+    params = st.query_params
+    role = params.get("role", None)
+except AttributeError:
+    # Fallback for older Streamlit versions
+    params = st.experimental_get_query_params()
+    role = params.get("role", [None])[0]
 
 # Define menu options for each role
 MENU_OPTIONS = {
