@@ -231,6 +231,9 @@ language_options = [
 selected_language = st.sidebar.selectbox("Select Language", language_options, index=1)
 st.sidebar.write(f"Selected Language: {selected_language}")
 
+# Define menu based on role
+menu = st.sidebar.selectbox("Main Menu", MENU_OPTIONS[role], key="main_menu")
+
 def t(text):
     # Translation temporarily disabled
     return text
