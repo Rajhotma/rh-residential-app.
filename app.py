@@ -234,13 +234,6 @@ st.sidebar.write(f"Selected Language: {selected_language}")
 def t(text):
     # Translation temporarily disabled
     return text
-menu = st.sidebar.radio("Navigation", [
-    "🏠 Customer Booking", 
-    "🤝 Partner Portal", 
-    "📋 Supervisor Portal",
-    "⭐ Membership & Points",
-    "🛡️ Admin Dashboard"
-])
 
 # 2. DATABASE & SEASONAL LOGIC
 LOCATIONS = ["Seremban 2", "Garden Homes", "Sendayan", "Nilai", "Putrajaya", "Cyberjaya", "Cheras", "Puchong", "Gaarden Homes", "Seremban 2", "Sendayan", "Suriaman", "Tiara", "Adira", "Bandar Sri Sendayan", "Kota Warisan", "Sepang", "KLIA1", "KLIA2", "Rasah Kemayan", "Port Dickson"]
