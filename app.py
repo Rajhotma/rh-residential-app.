@@ -151,31 +151,9 @@ def _save_booking_to_db(booking):
         booking['customer_address'],
         booking['assigned_to'],
         booking['assigned_at'].isoformat() if booking.get('assigned_at') else None,
-    menu = st.sidebar.radio("Navigation", MENU_OPTIONS.get(role, MENU_OPTIONS[None]))
-    c = conn.cursor()
-    c.execute('SELECT * FROM cleaners')
-    rows = c.fetchall()
+    ))
+    conn.commit()
     conn.close()
-    
-    cleaners = []
-    for row in rows:
-        cleaner = {
-            'name': row[0],
-            'lat': row[1],
-            'lon': row[2],
-            'status': row[3],
-            'last_update': datetime.fromisoformat(row[4]) if row[4] else None,
-            'on_site_since': datetime.fromisoformat(row[5]) if row[5] else None,
-            'expected_minutes': row[6],
-            'email': row[7],
-            'assigned_job': row[8],
-            'next_kin_name': row[9],
-            'next_kin_contact': row[10],
-            'bank_name': row[11],
-            'account_number': row[12],
-        }
-        cleaners.append(cleaner)
-    return cleaners
 
 def _save_cleaner_to_db(cleaner):
     """Save a single cleaner to database."""
