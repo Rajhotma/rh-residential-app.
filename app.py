@@ -67,7 +67,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.sidebar.image("logo.png", width='stretch')
+st.sidebar.image("logo.png", width=250)
 st.sidebar.title("AXIS EXECUTIVE PANEL")
 
 # QR code sharing for customer and partner portal
