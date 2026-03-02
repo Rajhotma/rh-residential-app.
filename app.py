@@ -46,7 +46,7 @@ MENU_OPTIONS = {
 }
 st.set_page_config(page_title="AXIS Modern Building Management", layout="wide")
 
-# Custom CSS for white background
+# Custom CSS for white background and dark text
 st.markdown("""
     <style>
         .stApp {
@@ -54,6 +54,15 @@ st.markdown("""
         }
         [data-testid="stAppViewContainer"] {
             background-color: white;
+        }
+        body {
+            color: #1f1f1f;
+        }
+        .stMarkdown, .stWrite, .stText, p {
+            color: #1f1f1f !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: #1f1f1f !important;
         }
     </style>
     """, unsafe_allow_html=True)
