@@ -893,9 +893,9 @@ elif menu == "🤝 Partner Portal":
     st.subheader(t("Upcoming Job"))
     st.write(f"*{t('Service Type')}:* Sweeping, Vacuuming and Mopping")
     st.write(f"*{t('Distance to Site')}:* 5 KM (30 mins)")
-    st.write(f"*{t('Customer Name')}:* {c_name if 'c_name' in locals() else 'Siti Aminah'}")
-    st.write(f"*{t('Contact')}:* {c_phone if 'c_phone' in locals() else '012-3456789'}")
-    st.write(f"*{t('Address')}:* {c_address if 'c_address' in locals() else 'Garden Homes, Seremban'}")
+    st.write(f"*{t('Customer Name')}:* Siti Aminah")
+    st.write(f"*{t('Contact')}:* 012-3456789")
+    st.write(f"*{t('Address')}:* Garden Homes, Seremban")
     
     # Earnings
     st.subheader(t("Earnings"))
