@@ -114,6 +114,36 @@ def _init_db():
     )
     ''')
     
+    # Supervisors table
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS supervisors (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        employee_number TEXT UNIQUE,
+        email TEXT,
+        phone TEXT,
+        nric TEXT,
+        bank_name TEXT,
+        account_number TEXT,
+        personal_details TEXT,
+        created_at TEXT,
+        status TEXT
+    )
+    ''')
+    
+    # Auto transactions table
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS auto_transactions (
+        id TEXT PRIMARY KEY,
+        supervisor_id TEXT,
+        amount REAL,
+        scheduled_time TEXT,
+        last_transaction TEXT,
+        status TEXT,
+        FOREIGN KEY(supervisor_id) REFERENCES supervisors(id)
+    )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -225,6 +255,78 @@ def _save_cleaner_to_db(cleaner):
     conn.commit()
     conn.close()
 
+def _load_supervisors_from_db():
+    """Load all supervisors from database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT * FROM supervisors')
+    rows = c.fetchall()
+    conn.close()
+    
+    supervisors = []
+    for row in rows:
+        supervisor = {
+            'id': row[0],
+            'name': row[1],
+            'employee_number': row[2],
+            'email': row[3],
+            'phone': row[4],
+            'nric': row[5],
+            'bank_name': row[6],
+            'account_number': row[7],
+            'personal_details': row[8],
+            'created_at': datetime.fromisoformat(row[9]) if row[9] else None,
+            'status': row[10],
+        }
+        supervisors.append(supervisor)
+    return supervisors
+
+def _save_supervisor_to_db(supervisor):
+    """Save a single supervisor to database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+    INSERT OR REPLACE INTO supervisors 
+    (id, name, employee_number, email, phone, nric, bank_name, account_number, personal_details, created_at, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        supervisor['id'],
+        supervisor['name'],
+        supervisor['employee_number'],
+        supervisor['email'],
+        supervisor['phone'],
+        supervisor['nric'],
+        supervisor['bank_name'],
+        supervisor['account_number'],
+        supervisor.get('personal_details'),
+        supervisor['created_at'].isoformat() if supervisor.get('created_at') else None,
+        supervisor['status'],
+    ))
+    conn.commit()
+    conn.close()
+
+def _save_auto_transaction_to_db(transaction):
+    """Save auto transaction schedule to database."""
+    _init_db()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+    INSERT OR REPLACE INTO auto_transactions 
+    (id, supervisor_id, amount, scheduled_time, last_transaction, status)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        transaction['id'],
+        transaction['supervisor_id'],
+        transaction['amount'],
+        transaction['scheduled_time'],
+        transaction['last_transaction'],
+        transaction['status'],
+    ))
+    conn.commit()
+    conn.close()
+
 # Initialize session state with data from database
 def _init_session_state():
     """Load data from database into session state on app startup."""
@@ -245,6 +347,12 @@ def _init_session_state():
             # Save defaults to DB
             for cleaner in st.session_state['cleaners']:
                 _save_cleaner_to_db(cleaner)
+    
+    if 'supervisors' not in st.session_state:
+        st.session_state['supervisors'] = _load_supervisors_from_db()
+    
+    if 'auto_transactions' not in st.session_state:
+        st.session_state['auto_transactions'] = []
     
     if 'notifications' not in st.session_state:
         st.session_state['notifications'] = []
