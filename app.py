@@ -67,7 +67,20 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.sidebar.image("logo.png", width=250)
+# Load logo safely with fallback
+try:
+    if os.path.exists("logo.png"):
+        from PIL import Image as PILImage
+        import time
+        # Read image with cache busting
+        with open("logo.png", "rb") as f:
+            logo_bytes = f.read()
+        logo_img = PILImage.open("logo.png")
+        st.sidebar.image(logo_img, width=250, use_column_width=False)
+    else:
+        st.sidebar.markdown("🏢 **AXIS MODERN BUILDING MANAGEMENT**")
+except Exception as e:
+    st.sidebar.markdown("🏢 **AXIS MODERN BUILDING MANAGEMENT**")
 st.sidebar.title("AXIS EXECUTIVE PANEL")
 
 # QR code sharing for customer and partner portal
@@ -1410,7 +1423,3 @@ elif menu == "🛡️ Admin Dashboard":
 
     # Footer copyright
     st.markdown("<div style='text-align:center; color:gray; margin-top:2em;'>© 2026 AXIS Modern Building Management.</div>", unsafe_allow_html=True)
-
-    # Footer / Copyright
-    st.write("---")
-    st.markdown("&copy; 2026 AXIS Modern Building Management")
