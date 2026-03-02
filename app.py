@@ -44,9 +44,22 @@ MENU_OPTIONS = {
         "🛡️ Admin Dashboard"
     ]
 }
-st.set_page_config(page_title="RH Modern Building Management", layout="wide")
+st.set_page_config(page_title="AXIS Modern Building Management", layout="wide")
+
+# Custom CSS for white background
+st.markdown("""
+    <style>
+        .stApp {
+            background-color: white;
+        }
+        [data-testid="stAppViewContainer"] {
+            background-color: white;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
 st.sidebar.image("logo.png", width='stretch')
-st.sidebar.title("RH EXECUTIVE PANEL")
+st.sidebar.title("AXIS EXECUTIVE PANEL")
 
 # QR code sharing for customer and partner portal
 st.sidebar.markdown("---")
@@ -78,7 +91,7 @@ if QRCODE_AVAILABLE:
 st.sidebar.markdown(f"[Open Partner Portal]({partner_url})")
 
 # --- DATABASE SETUP ---
-DB_FILE = "rh_database.db"
+DB_FILE = "axis_database.db"
 
 def _init_db():
     """Initialize SQLite database with required tables."""
@@ -616,7 +629,7 @@ LOCATION_COORDS = {
 
 # 3. CUSTOMER BOOKING
 if menu == "🏠 Customer Booking":
-    st.title(t("✨ RH Cleaning Services"))
+    st.title(t("✨ AXIS Cleaning Services"))
     st.write(f"{t('Selected Language')}: {selected_language}")
     col_main, col_summary = st.columns([2, 1])
     
@@ -664,7 +677,7 @@ if menu == "🏠 Customer Booking":
         st.metric(t("Total Bill"), f"MYR {grand_total:.2f}")
         with st.expander("Laundry Liability Disclaimer (click to view)"):
             st.markdown("""
-            - RH Modern Building Management is not liable for damages exceeding 20x the service fee paid for the affected laundry item.
+            - AXIS Modern Building Management is not liable for damages exceeding 20x the service fee paid for the affected laundry item.
             - By booking, you agree to this limit of liability.
             - For full terms, please contact our support.
             """)
@@ -680,7 +693,7 @@ if menu == "🏠 Customer Booking":
         st.markdown("""
     **Laundry Liability Disclaimer (Summary)**
 
-    RH Modern Building Management takes care when handling customer garments and household linens. Our liability for proven loss or damage caused by our staff is limited: the maximum compensation payable will not exceed twenty (20) times the amount charged for the cleaning service for that particular job, or the actual replacement value of the lost/damaged item, whichever is lower. Customers should declare high-value or sentimental items before service and remove valuables prior to service. Claims must be reported within 48 hours of service completion with photographic evidence and a description. This summary does not affect statutory consumer rights.
+    AXIS Modern Building Management takes care when handling customer garments and household linens. Our liability for proven loss or damage caused by our staff is limited: the maximum compensation payable will not exceed twenty (20) times the amount charged for the cleaning service for that particular job, or the actual replacement value of the lost/damaged item, whichever is lower. Customers should declare high-value or sentimental items before service and remove valuables prior to service. Claims must be reported within 48 hours of service completion with photographic evidence and a description. This summary does not affect statutory consumer rights.
     """)
 
         # Payment options
@@ -736,7 +749,7 @@ if menu == "🏠 Customer Booking":
                         smtp_pass = st.secrets.get("SMTP_PASS")
 
                         msg = EmailMessage()
-                        msg["Subject"] = f"RH Booking Confirmation & Payment Link - {booking_id[:8]}"
+                        msg["Subject"] = f"AXIS Booking Confirmation & Payment Link - {booking_id[:8]}"
                         msg["From"] = st.secrets.get("FROM_EMAIL", smtp_user)
                         msg["To"] = c_email
                         msg.set_content(f"Thank you {c_name},\n\nPlease pay MYR {grand_total:.2f} using the secure link:\n{payment_link}\n\nCustomer Service: +60146814167 (08:00-20:00 daily)")
@@ -989,7 +1002,7 @@ elif menu == "📋 Supervisor Portal":
         st.info(t("Map View not available in this environment. This is a placeholder."))
     
     # Supervisor Info
-    st.info("Supervisor 1: Name: Dian, Employee number RH0002\n\nSupervisor 2: Name: Aya, Employee number RH0003")
+    st.info("Supervisor 1: Name: Dian, Employee number AXIS0002\n\nSupervisor 2: Name: Aya, Employee number AXIS0003")
     # Verify Cleaners
     st.subheader(t("Verify Cleaners"))
     with st.expander(t("Pending Verifications")):
@@ -1062,7 +1075,7 @@ elif menu == "📋 Supervisor Portal":
 
 # 6. MEMBERSHIP & POINTS (RESTORED)
 elif menu == "⭐ Membership & Points":
-    st.title(t("⭐ RH Gold Membership"))
+    st.title(t("⭐ AXIS Gold Membership"))
     st.write(f"{t('Selected Language')}: {selected_language}")
     col1, col2 = st.columns(2)
     with col1:
@@ -1079,7 +1092,7 @@ elif menu == "⭐ Membership & Points":
 elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
     st.write(f"{t('Selected Language')}: {selected_language}")
-    if st.text_input(t("Key"), type="password") == "RH2026":
+    if st.text_input(t("Key"), type="password") == "AXIS2026":
         # --- SUPERVISOR MANAGEMENT SECTION ---
         st.subheader("👥 Supervisor Onboarding & Management")
         
@@ -1096,7 +1109,7 @@ elif menu == "🛡️ Admin Dashboard":
                 sup_nric = st.text_input("NRIC/ID Number", key="sup_nric_input")
             
             with col2:
-                sup_employee_num = st.text_input("Employee Number (e.g., RH0001)", key="sup_employee_num_input")
+                sup_employee_num = st.text_input("Employee Number (e.g., AXIS0001)", key="sup_employee_num_input")
                 sup_bank = st.selectbox("Bank Name", ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"], key="sup_bank_selectbox")
                 sup_account = st.text_input("Bank Account Number", key="sup_account_input")
                 sup_personal = st.text_area("Personal Particulars (Address, etc.)", key="sup_personal_input")
@@ -1387,8 +1400,8 @@ elif menu == "🛡️ Admin Dashboard":
         st.write("- Putrajaya: 32 bookings")
 
     # Footer copyright
-    st.markdown("<div style='text-align:center; color:gray; margin-top:2em;'>© 2026 RH Modern Building Management.</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center; color:gray; margin-top:2em;'>© 2026 AXIS Modern Building Management.</div>", unsafe_allow_html=True)
 
     # Footer / Copyright
     st.write("---")
-    st.markdown("&copy; 2026 RH Modern Building Management")
+    st.markdown("&copy; 2026 AXIS Modern Building Management")
