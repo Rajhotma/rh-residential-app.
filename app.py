@@ -851,17 +851,17 @@ elif menu == "🤝 Partner Portal":
     # Registration Section
     st.subheader(t("Registration"))
     with st.expander(t("Complete Registration")):
-        nric_passport = st.file_uploader(t("Upload NRIC or Passport"))
-        selfie = st.file_uploader(t("Upload Selfie for Verification"))
-        p_name = st.text_input(t("Full Name"))
-        gender = st.selectbox(t("Gender"), ["Male", "Female"])
-        p_dob = st.date_input(t("Date of Birth"))
-        p_contact = st.text_input(t("Contact Number"))
-        next_kin_name = st.text_input(t("Next of Kin Name (required)"))
-        next_kin_contact = st.text_input(t("Next of Kin Contact (required)"))
-        bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
-        account_number = st.text_input(t("Account Number"))
-        if st.button(t("Register")):
+        nric_passport = st.file_uploader(t("Upload NRIC or Passport"), key="partner_nric_passport")
+        selfie = st.file_uploader(t("Upload Selfie for Verification"), key="partner_selfie")
+        p_name = st.text_input(t("Full Name"), key="partner_full_name")
+        gender = st.selectbox(t("Gender"), ["Male", "Female"], key="partner_gender")
+        p_dob = st.date_input(t("Date of Birth"), key="partner_dob")
+        p_contact = st.text_input(t("Contact Number"), key="partner_contact")
+        next_kin_name = st.text_input(t("Next of Kin Name (required)"), key="partner_next_kin_name")
+        next_kin_contact = st.text_input(t("Next of Kin Contact (required)"), key="partner_next_kin_contact")
+        bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"], key="partner_bank_name")
+        account_number = st.text_input(t("Account Number"), key="partner_account_number")
+        if st.button(t("Register"), key="partner_register_btn"):
             if not next_kin_name or not next_kin_contact:
                 st.error(t("Next of kin name and contact are required."))
             else:
@@ -1006,8 +1006,8 @@ elif menu == "📋 Supervisor Portal":
     
     # Banking Details
     st.subheader(t("Banking Details"))
-    s_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
-    s_account_number = st.text_input(t("Account Number"))
+    s_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"], key="supervisor_bank_name")
+    s_account_number = st.text_input(t("Account Number"), key="supervisor_account_number")
     
     # Earnings (split equally between both supervisors)
     st.subheader(t("Earnings (Each Supervisor)"))
@@ -1090,16 +1090,16 @@ elif menu == "🛡️ Admin Dashboard":
             col1, col2 = st.columns(2)
             
             with col1:
-                sup_name = st.text_input("Supervisor Full Name")
-                sup_email = st.text_input("Email Address")
-                sup_phone = st.text_input("Phone Number")
-                sup_nric = st.text_input("NRIC/ID Number")
+                sup_name = st.text_input("Supervisor Full Name", key="sup_name_input")
+                sup_email = st.text_input("Email Address", key="sup_email_input")
+                sup_phone = st.text_input("Phone Number", key="sup_phone_input")
+                sup_nric = st.text_input("NRIC/ID Number", key="sup_nric_input")
             
             with col2:
-                sup_employee_num = st.text_input("Employee Number (e.g., RH0001)")
-                sup_bank = st.selectbox("Bank Name", ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
-                sup_account = st.text_input("Bank Account Number")
-                sup_personal = st.text_area("Personal Particulars (Address, etc.)")
+                sup_employee_num = st.text_input("Employee Number (e.g., RH0001)", key="sup_employee_num_input")
+                sup_bank = st.selectbox("Bank Name", ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"], key="sup_bank_selectbox")
+                sup_account = st.text_input("Bank Account Number", key="sup_account_input")
+                sup_personal = st.text_area("Personal Particulars (Address, etc.)", key="sup_personal_input")
             
             if st.button("Register Supervisor", key="add_supervisor"):
                 if sup_name and sup_employee_num and sup_email and sup_bank and sup_account:
@@ -1290,8 +1290,8 @@ elif menu == "🛡️ Admin Dashboard":
         
         # --- BANKING DETAILS SECTION ---
         st.subheader(t("Banking Details"))
-        a_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
-        a_account_number = st.text_input(t("Account Number"))
+        a_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"], key="admin_bank_name")
+        a_account_number = st.text_input(t("Account Number"), key="admin_account_number")
         
         st.subheader(t("Earnings (Minus Partners & Supervisor)"))
         st.metric(t("Daily Earnings"), "MYR 13.50")
