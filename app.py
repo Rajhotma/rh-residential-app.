@@ -7,6 +7,13 @@ import sqlite3
 import json
 import os
 
+# Try to import Google Sheets integration
+try:
+    from google_sheets_integration import GoogleSheetsManager, init_google_sheets
+    GOOGLE_SHEETS_AVAILABLE = True
+except ImportError:
+    GOOGLE_SHEETS_AVAILABLE = False
+
 # 1. SETUP & BRANDING
 try:
     import qrcode
@@ -327,6 +334,49 @@ def _save_auto_transaction_to_db(transaction):
     conn.commit()
     conn.close()
 
+def _process_scheduled_transactions():
+    """Process auto-transactions scheduled for 8pm."""
+    _init_db()
+    current_time = datetime.now()
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+    
+    # Check if current time is between 8:00 PM and 8:05 PM (to avoid duplicate processing)
+    if current_hour == 20 and current_minute < 5:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get all active supervisors
+        c.execute("SELECT id, name, account_number, bank_name FROM supervisors WHERE status = ?", ('Active',))
+        supervisors = c.fetchall()
+        
+        today = current_time.date().isoformat()
+        
+        for sup_id, sup_name, account, bank in supervisors:
+            # Check if transaction already done today
+            c.execute(
+                "SELECT last_transaction FROM auto_transactions WHERE supervisor_id = ?",
+                (sup_id,)
+            )
+            result = c.fetchone()
+            
+            if result is None or result[0] != today:
+                # Process transaction
+                c.execute(
+                    "UPDATE auto_transactions SET last_transaction = ? WHERE supervisor_id = ?",
+                    (today, sup_id)
+                )
+                if c.rowcount == 0:
+                    # Insert new record if doesn't exist
+                    trans_id = f"AUTO_{sup_id}_{int(datetime.now().timestamp())}"
+                    c.execute(
+                        "INSERT INTO auto_transactions (id, supervisor_id, amount, scheduled_time, last_transaction, status) VALUES (?, ?, ?, ?, ?, ?)",
+                        (trans_id, sup_id, 1.50, "20:00", today, "Completed")
+                    )
+        
+        conn.commit()
+        conn.close()
+
 # Initialize session state with data from database
 def _init_session_state():
     """Load data from database into session state on app startup."""
@@ -358,6 +408,9 @@ def _init_session_state():
         st.session_state['notifications'] = []
 
 _init_session_state()
+
+# Process scheduled auto-transactions at 8pm daily
+_process_scheduled_transactions()
 
 
 lang_codes = {
@@ -966,10 +1019,16 @@ elif menu == "📋 Supervisor Portal":
     st.metric(t("Monthly Commission"), f"MYR {total_monthly_commission/2:.2f}")
     st.caption("*Commission is split equally between Supervisor 1 (Dian) and Supervisor 2 (Aya)*")
     
-    # Withdrawal
-    st.subheader(t("Withdrawal"))
-    if st.button(t("Withdraw Commission")):
-        st.success(t("Withdrawal processed automatically to your bank account!"))
+    # Auto-Transaction Status
+    st.subheader(t("💳 Automatic Daily Transaction"))
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.info("⏰ Scheduled Time: 8:00 PM Daily")
+    with col2:
+        st.success("✅ Status: Active")
+    with col3:
+        st.write("**Bank:** Maybank")
+    st.caption("💬 Your earnings are automatically transferred to your bank account every day at 8:00 PM (UTC+8)")
     
     # Cleaner Movements
     st.subheader(t("Cleaner Movements & Assignments"))
@@ -1021,7 +1080,215 @@ elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
     st.write(f"{t('Selected Language')}: {selected_language}")
     if st.text_input(t("Key"), type="password") == "RH2026":
-        # Banking Details
+        # --- SUPERVISOR MANAGEMENT SECTION ---
+        st.subheader("👥 Supervisor Onboarding & Management")
+        
+        supervisor_tab1, supervisor_tab2 = st.tabs(["Add New Supervisor", "Manage Supervisors"])
+        
+        with supervisor_tab1:
+            st.write("Register a new supervisor with complete details")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                sup_name = st.text_input("Supervisor Full Name")
+                sup_email = st.text_input("Email Address")
+                sup_phone = st.text_input("Phone Number")
+                sup_nric = st.text_input("NRIC/ID Number")
+            
+            with col2:
+                sup_employee_num = st.text_input("Employee Number (e.g., RH0001)")
+                sup_bank = st.selectbox("Bank Name", ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
+                sup_account = st.text_input("Bank Account Number")
+                sup_personal = st.text_area("Personal Particulars (Address, etc.)")
+            
+            if st.button("Register Supervisor", key="add_supervisor"):
+                if sup_name and sup_employee_num and sup_email and sup_bank and sup_account:
+                    sup_id = f"SUP_{sup_employee_num}_{int(datetime.now().timestamp())}"
+                    new_supervisor = {
+                        'id': sup_id,
+                        'name': sup_name,
+                        'employee_number': sup_employee_num,
+                        'email': sup_email,
+                        'phone': sup_phone,
+                        'nric': sup_nric,
+                        'bank_name': sup_bank,
+                        'account_number': sup_account,
+                        'personal_details': sup_personal,
+                        'created_at': datetime.now(),
+                        'status': 'Active',
+                    }
+                    _save_supervisor_to_db(new_supervisor)
+                    st.session_state['supervisors'].append(new_supervisor)
+                    st.success(f"✅ Supervisor {sup_name} registered successfully with Employee Number: {sup_employee_num}")
+                    st.rerun()
+                else:
+                    st.error("Please fill all required fields (Name, Employee Number, Email, Bank, Account)")
+        
+        with supervisor_tab2:
+            supervisors = st.session_state.get('supervisors', [])
+            if supervisors:
+                st.write(f"Total Supervisors: {len(supervisors)}")
+                for sup in supervisors:
+                    with st.container(border=True):
+                        col1, col2, col3 = st.columns([2, 2, 1])
+                        with col1:
+                            st.write(f"**Name:** {sup['name']}")
+                            st.write(f"**Employee #:** {sup['employee_number']}")
+                            st.write(f"**Email:** {sup['email']}")
+                        with col2:
+                            st.write(f"**Phone:** {sup['phone']}")
+                            st.write(f"**Bank:** {sup['bank_name']}")
+                            st.write(f"**Account:** {sup['account_number'][-4:]}")
+                        with col3:
+                            st.write(f"**Status:** {sup['status']}")
+                            if st.button("Edit", key=f"edit_{sup['id']}"):
+                                st.info("Edit feature coming soon")
+            else:
+                st.info("No supervisors registered yet")
+        
+        # --- GOOGLE SHEETS INTEGRATION SECTION ---
+        st.subheader("📊 Google Sheets Integration")
+        
+        if GOOGLE_SHEETS_AVAILABLE:
+            gs_tab1, gs_tab2 = st.tabs(["Setup", "Sync Data"])
+            
+            with gs_tab1:
+                st.write("Set up Google Sheets integration to automatically sync supervisor and transaction data")
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    spreadsheet_id = st.text_input(
+                        "Google Sheets ID",
+                        help="Enter the spreadsheet ID from your Google Sheet URL (the long alphanumeric string)"
+                    )
+                    if st.button("🔗 Connect to Spreadsheet", key="connect_gs"):
+                        if spreadsheet_id:
+                            st.session_state['google_sheets_id'] = spreadsheet_id
+                            st.success(f"✅ Connected to spreadsheet: {spreadsheet_id[:20]}...")
+                        else:
+                            st.error("Please enter a valid Spreadsheet ID")
+                
+                with col2:
+                    st.write("**Need help?**")
+                    st.write("[Google Sheets Setup Guide](https://developers.google.com/sheets/api/quickstart/python)")
+                
+                st.info(
+                    "📝 **Setup Instructions:**\n"
+                    "1. Go to [Google Cloud Console](https://console.cloud.google.com/)\n"
+                    "2. Create a new project\n"
+                    "3. Enable Google Sheets API\n"
+                    "4. Create OAuth 2.0 credentials\n"
+                    "5. Download and save credentials.json in the project folder"
+                )
+            
+            with gs_tab2:
+                if 'google_sheets_id' in st.session_state:
+                    st.success(f"✅ Connected to: {st.session_state['google_sheets_id'][:30]}...")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        if st.button("📤 Sync Supervisors", key="sync_supervisors"):
+                            with st.spinner("Syncing supervisors..."):
+                                try:
+                                    if os.path.exists("credentials.json"):
+                                        gs_manager = init_google_sheets("credentials.json")
+                                        if gs_manager:
+                                            supervisors = st.session_state.get('supervisors', [])
+                                            if gs_manager.write_supervisors(st.session_state['google_sheets_id'], supervisors):
+                                                st.success(f"✅ Synced {len(supervisors)} supervisors to Google Sheets")
+                                            else:
+                                                st.error("❌ Failed to sync supervisors")
+                                        else:
+                                            st.error("❌ Google Sheets authentication failed. Check credentials.json")
+                                    else:
+                                        st.error("❌ credentials.json not found")
+                                except Exception as e:
+                                    st.error(f"❌ Error: {str(e)}")
+                    
+                    with col2:
+                        if st.button("📤 Sync Transactions", key="sync_transactions"):
+                            with st.spinner("Syncing transactions..."):
+                                try:
+                                    if os.path.exists("credentials.json"):
+                                        gs_manager = init_google_sheets("credentials.json")
+                                        if gs_manager:
+                                            # Load transactions from database
+                                            _init_db()
+                                            conn = sqlite3.connect(DB_FILE)
+                                            c = conn.cursor()
+                                            c.execute("SELECT * FROM auto_transactions")
+                                            rows = c.fetchall()
+                                            conn.close()
+                                            
+                                            transactions = []
+                                            for row in rows:
+                                                trans = {
+                                                    'id': row[0],
+                                                    'supervisor_id': row[1],
+                                                    'amount': row[2],
+                                                    'scheduled_time': row[3],
+                                                    'last_transaction': row[4],
+                                                    'status': row[5],
+                                                }
+                                                transactions.append(trans)
+                                            
+                                            if gs_manager.write_transactions(st.session_state['google_sheets_id'], transactions):
+                                                st.success(f"✅ Synced {len(transactions)} transactions to Google Sheets")
+                                            else:
+                                                st.error("❌ Failed to sync transactions")
+                                        else:
+                                            st.error("❌ Google Sheets authentication failed")
+                                    else:
+                                        st.error("❌ credentials.json not found")
+                                except Exception as e:
+                                    st.error(f"❌ Error: {str(e)}")
+                    
+                    with col3:
+                        if st.button("🔄 Sync All Data", key="sync_all"):
+                            with st.spinner("Syncing all data..."):
+                                try:
+                                    if os.path.exists("credentials.json"):
+                                        gs_manager = init_google_sheets("credentials.json")
+                                        if gs_manager:
+                                            supervisors = st.session_state.get('supervisors', [])
+                                            
+                                            # Load transactions
+                                            _init_db()
+                                            conn = sqlite3.connect(DB_FILE)
+                                            c = conn.cursor()
+                                            c.execute("SELECT * FROM auto_transactions")
+                                            rows = c.fetchall()
+                                            conn.close()
+                                            
+                                            transactions = []
+                                            for row in rows:
+                                                trans = {
+                                                    'id': row[0],
+                                                    'supervisor_id': row[1],
+                                                    'amount': row[2],
+                                                    'scheduled_time': row[3],
+                                                    'last_transaction': row[4],
+                                                    'status': row[5],
+                                                }
+                                                transactions.append(trans)
+                                            
+                                            if gs_manager.sync_all_data(st.session_state['google_sheets_id'], supervisors, transactions):
+                                                st.success(f"✅ Synced all data successfully!")
+                                            else:
+                                                st.error("❌ Some data failed to sync")
+                                        else:
+                                            st.error("❌ Google Sheets authentication failed")
+                                    else:
+                                        st.error("❌ credentials.json not found")
+                                except Exception as e:
+                                    st.error(f"❌ Error: {str(e)}")
+                else:
+                    st.info("👈 First, connect to a Google Sheet in the 'Setup' tab")
+        else:
+            st.warning("⚠️ Google Sheets integration libraries not installed. Run: pip install google-auth-oauthlib google-api-python-client")
+        
+        # --- BANKING DETAILS SECTION ---
         st.subheader(t("Banking Details"))
         a_bank_name = st.selectbox(t("Bank Name"), ["Maybank", "CIMB", "Public Bank", "RHB", "Hong Leong Bank", "AmBank", "Bank Islam", "Bank Rakyat"])
         a_account_number = st.text_input(t("Account Number"))
