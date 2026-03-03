@@ -46,23 +46,167 @@ MENU_OPTIONS = {
 }
 st.set_page_config(page_title="AXIS Modern Building Management", layout="wide")
 
-# Custom CSS for white background and dark text
+# Custom CSS for improved white background theme with better contrast and styling
 st.markdown("""
     <style>
+        /* Main App Background */
         .stApp {
-            background-color: white;
+            background-color: #f8f9fa;
         }
         [data-testid="stAppViewContainer"] {
-            background-color: white;
+            background-color: #f8f9fa;
         }
+        [data-testid="stSidebar"] {
+            background-color: #ffffff;
+            border-right: 2px solid #e0e0e0;
+        }
+        
+        /* Text Colors - Improved Contrast */
         body {
-            color: #1f1f1f;
+            color: #2c3e50;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .stMarkdown, .stWrite, .stText, p {
-            color: #1f1f1f !important;
+            color: #2c3e50 !important;
+            line-height: 1.6;
         }
-        h1, h2, h3, h4, h5, h6 {
-            color: #1f1f1f !important;
+        
+        /* Headings - Better Hierarchy */
+        h1 {
+            color: #1a3a52 !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.5em !important;
+        }
+        h2 {
+            color: #1f5a7a !important;
+            font-weight: 600 !important;
+            margin-top: 1.2em !important;
+            margin-bottom: 0.8em !important;
+        }
+        h3, h4, h5, h6 {
+            color: #2c5282 !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Input Fields & Texareas */
+        .stTextInput > div > div > input,
+        .stNumberInput > div > div > input,
+        .stTextArea > div > div > textarea,
+        .stSelectbox > div > div > select {
+            background-color: #ffffff !important;
+            color: #2c3e50 !important;
+            border: 1.5px solid #d0d0d0 !important;
+            border-radius: 6px !important;
+            padding: 0.6em !important;
+            font-size: 0.95rem;
+        }
+        
+        /* Buttons - Professional Look */
+        .stButton > button {
+            background-color: #1f5a7a !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 0.6em 1.5em !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease;
+        }
+        .stButton > button:hover {
+            background-color: #1a3a52 !important;
+            box-shadow: 0 2px 8px rgba(31, 90, 122, 0.2) !important;
+        }
+        
+        /* Info/Success/Warning/Error Boxes */
+        .stAlert {
+            border-radius: 8px !important;
+            padding: 1em !important;
+            border-left: 4px solid currentColor !important;
+        }
+        div[data-testid="stAlert"] {
+            background-color: #fafafa !important;
+            border-radius: 8px !important;
+        }
+        
+        /* Metric Boxes */
+        .stMetric {
+            background-color: #ffffff !important;
+            padding: 1.2em !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e8e8e8;
+        }
+        .stMetricLabel {
+            color: #666666 !important;
+            font-weight: 500 !important;
+        }
+        .stMetricValue {
+            color: #1a3a52 !important;
+            font-weight: 700 !important;
+        }
+        
+        /* Container/Expander Styling */
+        .stExpander {
+            border: 1px solid #d0d0d0 !important;
+            border-radius: 6px !important;
+            background-color: #ffffff;
+        }
+        [data-testid="stExpander"] summary {
+            color: #1f5a7a !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Tabs */
+        [data-testid="stTabs"] {
+            background-color: transparent;
+        }
+        button[data-testid="stTab"] {
+            color: #2c3e50 !important;
+            border-bottom: 2px solid transparent !important;
+            border-radius: 0 !important;
+        }
+        button[data-testid="stTab"][aria-selected="true"] {
+            color: #1f5a7a !important;
+            border-bottom-color: #1f5a7a !important;
+        }
+        
+        /* Selectbox & Radio */
+        .stRadio > label,
+        .stCheckbox > label {
+            color: #2c3e50 !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Sidebar Text */
+        .stSidebar .stMarkdown,
+        .stSidebar .stWrite,
+        .stSidebar p {
+            color: #2c3e50 !important;
+        }
+        .stSidebar h1, .stSidebar h2 {
+            color: #1a3a52 !important;
+        }
+        
+        /* Links */
+        a {
+            color: #1f5a7a !important;
+            text-decoration: none !important;
+            font-weight: 500;
+        }
+        a:hover {
+            color: #2c5282 !important;
+            text-decoration: underline !important;
+        }
+        
+        /* Caption & Small Text */
+        .stCaption {
+            color: #666666 !important;
+        }
+        
+        /* Divider */
+        hr {
+            border-color: #e0e0e0 !important;
+            margin: 1.5em 0 !important;
         }
     </style>
     """, unsafe_allow_html=True)
