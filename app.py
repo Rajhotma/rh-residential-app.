@@ -1258,7 +1258,8 @@ elif menu == "⭐ Membership & Points":
 elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
     st.write(f"{t('Selected Language')}: {selected_language}")
-    if st.text_input(t("Key"), type="password") == "AXIS2026":
+    admin_password = st.text_input("Enter Admin Password")
+    if admin_password == "AXIS2026":
         # --- SUPERVISOR MANAGEMENT SECTION ---
         st.subheader("👥 Supervisor Onboarding & Management")
         
