@@ -1,6 +1,6 @@
 import streamlit as st
 # from googletrans import Translator
-from datetime import datetime, time
+from datetime import datetime, time, date
 import random
 import math
 import sqlite3
@@ -22,7 +22,6 @@ try:
     QRCODE_AVAILABLE = True
 except ImportError:
     QRCODE_AVAILABLE = False
-    st.error("QR code module not available. Please refresh the page or contact support.")
 try:
     params = st.query_params
     role = params.get("role", None)
@@ -46,46 +45,48 @@ MENU_OPTIONS = {
 }
 st.set_page_config(page_title="AXIS Modern Building Management", layout="wide")
 
-# Custom CSS for improved white background theme with better contrast and styling
+# Custom CSS - Deep Blue Gradient Theme
 st.markdown("""
     <style>
-        /* Main App Background */
+        /* Main App Background - Deep Blue Gradient */
         .stApp {
-            background-color: #f8f9fa;
+            background: linear-gradient(180deg, #001f3f 0%, #003366 100%);
+            color: #ffffff;
         }
         [data-testid="stAppViewContainer"] {
-            background-color: #f8f9fa;
+            background: linear-gradient(180deg, #001f3f 0%, #003366 100%);
+            color: #ffffff;
         }
         [data-testid="stSidebar"] {
-            background-color: #ffffff;
-            border-right: 2px solid #e0e0e0;
+            background: linear-gradient(180deg, #001f3f 0%, #003366 100%);
+            border-right: 2px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* Text Colors - Improved Contrast */
+        /* Text Colors - Light for Dark Background */
         body {
-            color: #2c3e50;
+            color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .stMarkdown, .stWrite, .stText, p {
-            color: #2c3e50 !important;
+            color: #ffffff !important;
             line-height: 1.6;
         }
         
-        /* Headings - Better Hierarchy */
+        /* Headings - Light Blue Accents */
         h1 {
-            color: #1a3a52 !important;
+            color: #64b5f6 !important;
             font-weight: 700 !important;
             letter-spacing: -0.5px;
             margin-bottom: 0.5em !important;
         }
         h2 {
-            color: #1f5a7a !important;
+            color: #81d4fa !important;
             font-weight: 600 !important;
             margin-top: 1.2em !important;
             margin-bottom: 0.8em !important;
         }
         h3, h4, h5, h6 {
-            color: #2c5282 !important;
+            color: #b3e5fc !important;
             font-weight: 600 !important;
         }
         
@@ -94,65 +95,73 @@ st.markdown("""
         .stNumberInput > div > div > input,
         .stTextArea > div > div > textarea,
         .stSelectbox > div > div > select {
-            background-color: #ffffff !important;
-            color: #2c3e50 !important;
-            border: 1.5px solid #d0d0d0 !important;
-            border-radius: 6px !important;
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            color: #ffffff !important;
+            border: 1.5px solid rgba(129, 212, 250, 0.3) !important;
+            border-radius: 8px !important;
             padding: 0.6em !important;
             font-size: 0.95rem;
         }
+        .stTextInput > div > div > input::placeholder,
+        .stTextArea > div > div > textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
         
-        /* Buttons - Professional Look */
+        /* Buttons - Vibrant Blue */
         .stButton > button {
-            background-color: #1f5a7a !important;
+            background-color: #007bff !important;
             color: white !important;
-            border: none !important;
-            border-radius: 6px !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 12px !important;
             padding: 0.6em 1.5em !important;
             font-weight: 600 !important;
             transition: all 0.3s ease;
         }
         .stButton > button:hover {
-            background-color: #1a3a52 !important;
-            box-shadow: 0 2px 8px rgba(31, 90, 122, 0.2) !important;
+            background-color: #0056b3 !important;
+            border-color: #ffffff !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4) !important;
         }
         
         /* Info/Success/Warning/Error Boxes */
         .stAlert {
-            border-radius: 8px !important;
+            border-radius: 12px !important;
             padding: 1em !important;
             border-left: 4px solid currentColor !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
         }
         div[data-testid="stAlert"] {
-            background-color: #fafafa !important;
-            border-radius: 8px !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            color: #ffffff !important;
+            border-radius: 12px !important;
         }
         
         /* Metric Boxes */
         .stMetric {
-            background-color: #ffffff !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
             padding: 1.2em !important;
-            border-radius: 8px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            border: 1px solid #e8e8e8;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .stMetricLabel {
-            color: #666666 !important;
+            color: rgba(255, 255, 255, 0.8) !important;
             font-weight: 500 !important;
         }
         .stMetricValue {
-            color: #1a3a52 !important;
+            color: #81d4fa !important;
             font-weight: 700 !important;
         }
         
         /* Container/Expander Styling */
         .stExpander {
-            border: 1px solid #d0d0d0 !important;
-            border-radius: 6px !important;
-            background-color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            background-color: rgba(255, 255, 255, 0.05);
         }
         [data-testid="stExpander"] summary {
-            color: #1f5a7a !important;
+            color: #81d4fa !important;
             font-weight: 600 !important;
         }
         
@@ -161,19 +170,19 @@ st.markdown("""
             background-color: transparent;
         }
         button[data-testid="stTab"] {
-            color: #2c3e50 !important;
+            color: rgba(255, 255, 255, 0.7) !important;
             border-bottom: 2px solid transparent !important;
             border-radius: 0 !important;
         }
         button[data-testid="stTab"][aria-selected="true"] {
-            color: #1f5a7a !important;
-            border-bottom-color: #1f5a7a !important;
+            color: #81d4fa !important;
+            border-bottom-color: #81d4fa !important;
         }
         
         /* Selectbox & Radio */
         .stRadio > label,
         .stCheckbox > label {
-            color: #2c3e50 !important;
+            color: #ffffff !important;
             font-weight: 500 !important;
         }
         
@@ -181,31 +190,31 @@ st.markdown("""
         .stSidebar .stMarkdown,
         .stSidebar .stWrite,
         .stSidebar p {
-            color: #2c3e50 !important;
+            color: #ffffff !important;
         }
         .stSidebar h1, .stSidebar h2 {
-            color: #1a3a52 !important;
+            color: #64b5f6 !important;
         }
         
         /* Links */
         a {
-            color: #1f5a7a !important;
+            color: #81d4fa !important;
             text-decoration: none !important;
             font-weight: 500;
         }
         a:hover {
-            color: #2c5282 !important;
+            color: #b3e5fc !important;
             text-decoration: underline !important;
         }
         
         /* Caption & Small Text */
         .stCaption {
-            color: #666666 !important;
+            color: rgba(255, 255, 255, 0.7) !important;
         }
         
         /* Divider */
         hr {
-            border-color: #e0e0e0 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
             margin: 1.5em 0 !important;
         }
     </style>
@@ -1529,12 +1538,24 @@ elif menu == "🛡️ Admin Dashboard":
             if not df.empty and len(df) > 0:
                 for _, row in df.iterrows():
                     svc = row.get('service_date')
-                    if svc and isinstance(svc, (datetime.date, datetime)):
-                        svc_date = svc.date() if isinstance(svc, datetime) else svc
-                        if svc_date > today:
-                            svc_str = svc_date.strftime('%Y-%m-%d') if hasattr(svc_date, 'strftime') else str(svc_date)
-                            if svc_str in queued_counts:
-                                queued_counts[svc_str] += 1
+                    if svc is not None:
+                        try:
+                            # Handle different datetime types (date, datetime, pd.Timestamp, etc.)
+                            if isinstance(svc, datetime):
+                                svc_date = svc.date()
+                            elif isinstance(svc, date):
+                                svc_date = svc
+                            else:
+                                # Convert pandas/numpy datetime types to date
+                                svc_date = pd.Timestamp(svc).date()
+                            
+                            if svc_date > today:
+                                svc_str = svc_date.strftime('%Y-%m-%d')
+                                if svc_str in queued_counts:
+                                    queued_counts[svc_str] += 1
+                        except Exception:
+                            # Skip if conversion fails
+                            continue
 
             col1, col2 = st.columns(2)
             with col1:
@@ -1568,3 +1589,7 @@ elif menu == "🛡️ Admin Dashboard":
 
     # Footer copyright
     st.markdown("<div style='text-align:center; color:gray; margin-top:2em;'>© 2026 AXIS Modern Building Management.</div>", unsafe_allow_html=True)
+
+    # Footer / Copyright
+    st.write("---")
+    st.markdown("&copy; 2026 AXIS Modern Building Management")
