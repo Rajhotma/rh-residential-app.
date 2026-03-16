@@ -45,10 +45,10 @@ MENU_OPTIONS = {
 }
 st.set_page_config(page_title="AXIS Modern Building Management", layout="wide")
 
-# Custom CSS - Deep Blue Gradient Theme
+# Custom CSS - Deep Blue & Grey Balanced Theme
 st.markdown("""
     <style>
-        /* Main App Background - Deep Blue Gradient */
+        /* Main App Background - Deep Blue Gradient with Grey Accents */
         .stApp {
             background: linear-gradient(180deg, #001f3f 0%, #003366 100%);
             color: #ffffff;
@@ -58,8 +58,8 @@ st.markdown("""
             color: #ffffff;
         }
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #001f3f 0%, #003366 100%);
-            border-right: 2px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(180deg, #001a2e 0%, #002a4d 100%);
+            border-right: 2px solid rgba(150, 150, 150, 0.3);
         }
         
         /* Text Colors - Light for Dark Background */
@@ -72,12 +72,14 @@ st.markdown("""
             line-height: 1.6;
         }
         
-        /* Headings - Light Blue Accents */
+        /* Headings - Blue & Grey Mix */
         h1 {
             color: #64b5f6 !important;
             font-weight: 700 !important;
             letter-spacing: -0.5px;
             margin-bottom: 0.5em !important;
+            border-bottom: 2px solid rgba(128, 128, 128, 0.4) !important;
+            padding-bottom: 0.5em !important;
         }
         h2 {
             color: #81d4fa !important;
@@ -86,32 +88,36 @@ st.markdown("""
             margin-bottom: 0.8em !important;
         }
         h3, h4, h5, h6 {
-            color: #b3e5fc !important;
+            color: #b0c4de !important;
             font-weight: 600 !important;
         }
         
-        /* Input Fields & Texareas */
+        /* Input Fields & Texareas - Grey Borders */
         .stTextInput > div > div > input,
         .stNumberInput > div > div > input,
         .stTextArea > div > div > textarea,
         .stSelectbox > div > div > select {
             background-color: rgba(255, 255, 255, 0.08) !important;
             color: #ffffff !important;
-            border: 1.5px solid rgba(129, 212, 250, 0.3) !important;
+            border: 1.5px solid rgba(128, 128, 128, 0.5) !important;
             border-radius: 8px !important;
             padding: 0.6em !important;
             font-size: 0.95rem;
         }
+        .stTextInput > div > div > input:focus,
+        .stTextArea > div > div > textarea:focus {
+            border-color: rgba(129, 212, 250, 0.6) !important;
+        }
         .stTextInput > div > div > input::placeholder,
         .stTextArea > div > div > textarea::placeholder {
-            color: rgba(255, 255, 255, 0.6) !important;
+            color: rgba(200, 200, 200, 0.7) !important;
         }
         
-        /* Buttons - Vibrant Blue */
+        /* Buttons - Blue Primary with Grey Alternatives */
         .stButton > button {
             background-color: #007bff !important;
             color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border: 1.5px solid rgba(128, 128, 128, 0.3) !important;
             border-radius: 12px !important;
             padding: 0.6em 1.5em !important;
             font-weight: 600 !important;
@@ -119,34 +125,47 @@ st.markdown("""
         }
         .stButton > button:hover {
             background-color: #0056b3 !important;
-            border-color: #ffffff !important;
+            border-color: rgba(200, 200, 200, 0.6) !important;
             transform: translateY(-2px) !important;
-            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(128, 128, 128, 0.3) !important;
         }
         
-        /* Info/Success/Warning/Error Boxes */
+        /* Secondary Button Style - Grey */
+        button.secondary-btn {
+            background-color: rgba(128, 128, 128, 0.6) !important;
+            color: white !important;
+            border: 1px solid rgba(160, 160, 160, 0.5) !important;
+        }
+        button.secondary-btn:hover {
+            background-color: rgba(128, 128, 128, 0.8) !important;
+            box-shadow: 0 4px 12px rgba(128, 128, 128, 0.4) !important;
+        }
+        
+        /* Info/Success/Warning/Error Boxes - With Grey Borders */
         .stAlert {
             border-radius: 12px !important;
             padding: 1em !important;
             border-left: 4px solid currentColor !important;
+            border: 1px solid rgba(128, 128, 128, 0.4) !important;
             background-color: rgba(255, 255, 255, 0.05) !important;
         }
         div[data-testid="stAlert"] {
             background-color: rgba(255, 255, 255, 0.05) !important;
             color: #ffffff !important;
             border-radius: 12px !important;
+            border: 1px solid rgba(128, 128, 128, 0.4) !important;
         }
         
-        /* Metric Boxes */
+        /* Metric Boxes - Grey Accents */
         .stMetric {
-            background-color: rgba(255, 255, 255, 0.05) !important;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(128, 128, 128, 0.08) 100%) !important;
             padding: 1.2em !important;
             border-radius: 12px !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(128, 128, 128, 0.3);
         }
         .stMetricLabel {
-            color: rgba(255, 255, 255, 0.8) !important;
+            color: rgba(200, 200, 200, 0.9) !important;
             font-weight: 500 !important;
         }
         .stMetricValue {
@@ -154,25 +173,31 @@ st.markdown("""
             font-weight: 700 !important;
         }
         
-        /* Container/Expander Styling */
+        /* Container/Expander Styling - Grey Borders */
         .stExpander {
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(128, 128, 128, 0.4) !important;
             border-radius: 12px !important;
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: rgba(255, 255, 255, 0.04);
         }
         [data-testid="stExpander"] summary {
             color: #81d4fa !important;
             font-weight: 600 !important;
         }
         
-        /* Tabs */
+        /* Tabs - Blue & Grey */
         [data-testid="stTabs"] {
             background-color: transparent;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.3) !important;
         }
         button[data-testid="stTab"] {
-            color: rgba(255, 255, 255, 0.7) !important;
+            color: rgba(200, 200, 200, 0.8) !important;
             border-bottom: 2px solid transparent !important;
             border-radius: 0 !important;
+            transition: all 0.2s ease;
+        }
+        button[data-testid="stTab"]:hover {
+            color: rgba(255, 255, 255, 0.9) !important;
+            border-bottom-color: rgba(128, 128, 128, 0.5) !important;
         }
         button[data-testid="stTab"][aria-selected="true"] {
             color: #81d4fa !important;
@@ -196,40 +221,52 @@ st.markdown("""
             color: #64b5f6 !important;
         }
         
-        /* Links */
+        /* Links - Blue with Grey Hover */
         a {
             color: #81d4fa !important;
             text-decoration: none !important;
             font-weight: 500;
+            transition: all 0.2s ease;
         }
         a:hover {
             color: #b3e5fc !important;
             text-decoration: underline !important;
+            text-shadow: 0 0 8px rgba(128, 128, 128, 0.3) !important;
         }
         
-        /* Caption & Small Text */
+        /* Caption & Small Text - Grey Tone */
         .stCaption {
-            color: rgba(255, 255, 255, 0.7) !important;
+            color: rgba(180, 180, 180, 0.8) !important;
         }
         
-        /* Divider */
+        /* Divider - Grey */
         hr {
-            border-color: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(128, 128, 128, 0.4) !important;
             margin: 1.5em 0 !important;
+        }
+        
+        /* Tables - With Grey Grid */
+        table {
+            border-collapse: collapse;
+        }
+        td, th {
+            border: 1px solid rgba(128, 128, 128, 0.3) !important;
+            padding: 0.8em !important;
+        }
+        th {
+            background-color: rgba(128, 128, 128, 0.15) !important;
+            color: #b0c4de !important;
+            font-weight: 600 !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
 # Load logo safely with fallback
 try:
-    if os.path.exists("logo.png"):
-        from PIL import Image as PILImage
-        import time
-        # Read image with cache busting
-        with open("logo.png", "rb") as f:
-            logo_bytes = f.read()
-        logo_img = PILImage.open("logo.png")
-        st.sidebar.image(logo_img, width=250, use_column_width=False)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(script_dir, "logo.png")
+    if os.path.exists(logo_path):
+        st.sidebar.image(logo_path, width=280)
     else:
         st.sidebar.markdown("🏢 **AXIS MODERN BUILDING MANAGEMENT**")
 except Exception as e:
@@ -873,7 +910,7 @@ if menu == "🏠 Customer Booking":
 
         # Payment options
         st.write("**Payment Options**")
-        payment_method = st.selectbox(t("Choose Payment Method"), ["Online Transfer", "Credit/Debit Card (via Link)", "Cash on Arrival (COD)"], index=0)
+        payment_method = st.selectbox(t("Choose Payment Method"), ["Online Transfer", "Credit/Debit Card (via Link)"], index=0)
         if payment_method == "Online Transfer":
             st.write("Please transfer to:")
             st.write("**Bank Name:** RHB")
@@ -881,8 +918,6 @@ if menu == "🏠 Customer Booking":
             st.write("Reference: Customer name + booking date")
         elif payment_method == "Credit/Debit Card (via Link)":
             st.write("You will receive a secure payment link after confirming the booking.")
-        else:
-            st.write("Please have the exact amount ready for the cleaner on arrival.")
 
         st.write("All services may require partial prepayment depending on promotions and scheduling.")
 
