@@ -262,45 +262,64 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Load logo safely with fallback
+# Load and display logo
 try:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(script_dir, "logo.png")
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
     if os.path.exists(logo_path):
         st.sidebar.image(logo_path, width=280)
     else:
-        st.sidebar.markdown("🏢 **AXIS MODERN BUILDING MANAGEMENT**")
-except Exception as e:
+        st.sidebar.image("logo.png", width=280)
+except Exception:
     st.sidebar.markdown("🏢 **AXIS MODERN BUILDING MANAGEMENT**")
-st.sidebar.title("AXIS EXECUTIVE PANEL")
 
-# QR code sharing for customer and partner portal
+st.sidebar.title("AXIS EXECUTIVE PANEL")
 st.sidebar.markdown("---")
-st.sidebar.subheader("Quick Access QR Codes")
-base_url = st.secrets["base_url"] if "base_url" in st.secrets else "https://your-app-url"  # Set your deployment URL here
+
+# Get base_url from secrets with proper fallback
+try:
+    base_url = st.secrets.get("base_url", "").strip()
+    if not base_url or "your-deployment" in base_url.lower() or "your-app" in base_url.lower():
+        st.sidebar.warning("⚠️ Set **base_url** in .streamlit/secrets.toml")
+        base_url = "https://your-app-url"
+except:
+    base_url = "https://your-app-url"
+
 customer_url = f"{base_url}/?role=customer"
 partner_url = f"{base_url}/?role=partner"
 
 def qr_img(url):
+    """Generate QR code image for URL."""
     if not QRCODE_AVAILABLE:
         return None
-    qr = qrcode.QRCode(box_size=2, border=2)
-    qr.add_data(url)
-    qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return buf
+    try:
+        qr = qrcode.QRCode(box_size=2, border=2)
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return buf
+    except Exception:
+        return None
 
-st.sidebar.markdown("**Customer Booking**")
+# Customer Booking Section
+st.sidebar.markdown("### 📱 Customer Booking")
 if QRCODE_AVAILABLE:
-    st.sidebar.image(qr_img(customer_url), caption="Scan to Book (Customer)", use_column_width=True)
-st.sidebar.markdown(f"[Open Booking Page]({customer_url})")
+    qr_buf = qr_img(customer_url)
+    if qr_buf:
+        st.sidebar.image(qr_buf, caption="Scan to Book", width=180)
+st.sidebar.markdown(f"[🔗 Open Booking Page]({customer_url})")
+st.sidebar.markdown("")
 
-st.sidebar.markdown("**Partner Portal**")
+# Partner Portal Section
+st.sidebar.markdown("### 🤝 Partner Portal")
 if QRCODE_AVAILABLE:
-    st.sidebar.image(qr_img(partner_url), caption="Scan for Partner Portal", use_column_width=True)
-st.sidebar.markdown(f"[Open Partner Portal]({partner_url})")
+    qr_buf = qr_img(partner_url)
+    if qr_buf:
+        st.sidebar.image(qr_buf, caption="Scan for Portal", width=180)
+st.sidebar.markdown(f"[🔗 Open Partner Portal]({partner_url})")
+st.sidebar.markdown("---")
 
 # --- DATABASE SETUP ---
 DB_FILE = "axis_database.db"
@@ -644,7 +663,7 @@ lang_codes = {
     "Chinese": "zh-cn",
     "Nepal": "ne",
     "Myanmar": "my",
-    "Pakistan": "ur",
+    "Indonesia": "id",
     "Tamil": "ta"
 }
 
@@ -654,17 +673,52 @@ language_options = [
     "Chinese",
     "Nepal",
     "Myanmar",
-    "Pakistan",
+    "Indonesia",
     "Tamil"
 ]
-selected_language = st.sidebar.selectbox("Select Language", language_options, index=1)
-st.sidebar.write(f"Selected Language: {selected_language}")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ⚙️ Settings")
+selected_language = st.sidebar.selectbox("🌐 Language", language_options, index=1)
 
 # Define menu based on role
-menu = st.sidebar.selectbox("Main Menu", MENU_OPTIONS[role], key="main_menu")
+st.sidebar.markdown("### 📋 Navigation")
+menu = st.sidebar.selectbox("Select Page", MENU_OPTIONS[role], key="main_menu")
+st.sidebar.markdown("---")
 
 def t(text):
-    # Translation temporarily disabled
+    """Translate text to selected language."""
+    lang_code = lang_codes.get(selected_language, "en")
+    # Basic translation dictionary for common UI strings
+    translations = {
+        "ms": {  # Bahasa Malaysia
+            "Customer Booking": "Tempahan Pelanggan",
+            "Partner Portal": "Portal Mitra",
+            "✨ AXIS Cleaning Services": "✨ Perkhidmatan Pembersihan AXIS",
+            "Total Bill": "Jumlah Bil",
+            "Confirm Booking": "Sahkan Tempahan",
+            "Customer Name": "Nama Pelanggan",
+            "Customer Email": "E-mel Pelanggan",
+            "Customer Contact Number": "Nombor Hubungan Pelanggan",
+        },
+        "id": {  # Indonesia  
+            "Customer Booking": "Pemesanan Pelanggan",
+            "Partner Portal": "Portal Mitra",
+            "✨ AXIS Cleaning Services": "✨ Layanan Pembersihan AXIS",
+            "Total Bill": "Total Tagihan",
+            "Confirm Booking": "Konfirmasi Pemesanan",
+            "Customer Name": "Nama Pelanggan",
+            "Customer Email": "Email Pelanggan",
+            "Customer Contact Number": "Nomor Kontak Pelanggan",
+        },
+        "zh-cn": {  # Chinese
+            "Customer Name": "客户名字",
+            "Customer Email": "客户邮箱",
+            "Total Bill": "总账单",
+        },
+    }
+    if lang_code in translations and text in translations[lang_code]:
+        return translations[lang_code][text]
     return text
 
 # 2. DATABASE & SEASONAL LOGIC
@@ -815,7 +869,7 @@ def _simulate_step():
 
 # FESTIVAL DISCOUNT SETTINGS
 FESTIVAL_NAME = "Ramadan & Raya Special"
-FESTIVAL_DISCOUNT = 5.0 # MYR 5.00 Off
+FESTIVAL_DISCOUNT = 0.0 # MYR 0.00 Off - DISABLED
 
 # Location coordinates mapping (postcode/area to lat/lon)
 LOCATION_COORDS = {
@@ -842,7 +896,6 @@ LOCATION_COORDS = {
 # 3. CUSTOMER BOOKING
 if menu == "🏠 Customer Booking":
     st.title(t("✨ AXIS Cleaning Services"))
-    st.write(f"{t('Selected Language')}: {selected_language}")
     col_main, col_summary = st.columns([2, 1])
     
     with col_main:
@@ -881,11 +934,12 @@ if menu == "🏠 Customer Booking":
         iron_total = sum(iron_qty[item] * IRON_RATES[item] for item in IRON_RATES)
         car_porch_cost = 55 if car_porch else 0
         subtotal = base_price + f_map[fridge] + iron_total + car_porch_cost
-        # Apply Festival Discount
+        # Apply Festival Discount (currently disabled)
         discount_amount = FESTIVAL_DISCOUNT
         grand_total = subtotal - discount_amount
         st.write(f"{t('Subtotal')} ({hours} {t('hour')}{t('s') if hours > 1 else ''}): MYR {subtotal:.2f}")
-        st.success(f"🎊 {t(FESTIVAL_NAME)}: -MYR {discount_amount:.2f}")
+        if discount_amount > 0:
+            st.success(f"🎊 {t(FESTIVAL_NAME)}: -MYR {discount_amount:.2f}")
         st.metric(t("Total Bill"), f"MYR {grand_total:.2f}")
         with st.expander("Laundry Liability Disclaimer (click to view)"):
             st.markdown("""
@@ -1016,7 +1070,6 @@ if menu == "🏠 Customer Booking":
 # 4. PARTNER PORTAL
 elif menu == "🤝 Partner Portal":
     st.title(t("🤝 Partner Job Inbox"))
-    st.write(f"{t('Selected Language')}: {selected_language}")
     _init_cleaners()
     
     # Status Toggle
@@ -1142,8 +1195,6 @@ elif menu == "🤝 Partner Portal":
 # 5. SUPERVISOR PORTAL (REPLY FUNCTION ADDED)
 elif menu == "📋 Supervisor Portal":
     st.title(t("📋 Supervisor Control"))
-    st.write(f"{t('Selected Language')}: {selected_language}")
-    
     _init_cleaners()
     _auto_assign_jobs()  # Auto-assign jobs to nearest available cleaners
     
@@ -1286,7 +1337,6 @@ elif menu == "📋 Supervisor Portal":
 # 6. MEMBERSHIP & POINTS (RESTORED)
 elif menu == "⭐ Membership & Points":
     st.title(t("⭐ AXIS Gold Membership"))
-    st.write(f"{t('Selected Language')}: {selected_language}")
     col1, col2 = st.columns(2)
     with col1:
         st.metric(t("Your Total Points"), "1,250 PTS")
@@ -1301,7 +1351,6 @@ elif menu == "⭐ Membership & Points":
 # 7. ADMIN DASHBOARD
 elif menu == "🛡️ Admin Dashboard":
     st.title(t("🛡️ Admin Suite"))
-    st.write(f"{t('Selected Language')}: {selected_language}")
     admin_password = st.text_input("Enter Admin Password")
     if admin_password == "AXIS2026":
         # --- SUPERVISOR MANAGEMENT SECTION ---
